@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "496348911118",
+    "project_id": "fc-zlicin-4b6d6",
+    "storage_bucket": "fc-zlicin-4b6d6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:496348911118:android:cb2bd0404ae308f8388e5f",
+        "android_client_info": {
+          "package_name": "cz.fczlicin.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAh0wRC_bOWTvx2v05W4lBr87kC4_dsDcI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
