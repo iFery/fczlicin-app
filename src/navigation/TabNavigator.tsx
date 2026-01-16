@@ -153,6 +153,17 @@ function HomeStack() {
           headerTitleAlign: 'center',
         }} 
       />
+      <Stack.Screen 
+        name="MatchDetail" 
+        component={MatchDetailScreen} 
+        options={{ 
+          headerShown: true, 
+          title: 'Detail zápasu',
+          headerStyle: { backgroundColor: '#014fa1' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { color: '#FFFFFF' }
+        }} 
+      />
       {renderSharedScreens()}
     </Stack.Navigator>
   );

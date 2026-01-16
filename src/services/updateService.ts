@@ -10,7 +10,7 @@ import { crashlyticsService } from './crashlytics';
 import NetInfo from '@react-native-community/netinfo';
 
 // iOS App Store ID - unique per app, same across all regions/languages
-// From: https://apps.apple.com/cz/app/fm-city-fest/id6747171420
+// TODO: Aktualizovat na správné App Store ID pro FC Zličín aplikaci
 const IOS_APP_STORE_ID = '6747171420';
 
 export type UpdateType = 'forced' | 'optional' | 'none';
@@ -120,10 +120,12 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     // Compare current version with latest version
     const isBelowLatest = compareVersions(currentVersion, latestVersion) < 0;
 
-    // Forced update: user is below minimum required version AND force update is enabled
-    if (isBelowMinRequired && forceUpdateEnabled) {
+    // Forced update: user is below minimum required version
+    // This is ALWAYS forced, regardless of forceUpdateEnabled flag
+    // forceUpdateEnabled might be used for other purposes, but minRequiredVersion always forces update
+    if (isBelowMinRequired) {
       const whatsNew = parseWhatsNew(remoteConfigService.getString('update_whats_new', ''));
-      crashlyticsService.log('update_required: forced');
+      crashlyticsService.log('update_required: forced (below_min_required)');
       return {
         type: 'forced',
         latestVersion,
@@ -131,7 +133,7 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
       };
     }
 
-    // Optional update: user is below latest version but above minimum required
+    // Optional update: user is below latest version but at or above minimum required
     if (isBelowLatest) {
       const whatsNew = parseWhatsNew(remoteConfigService.getString('update_whats_new', ''));
       crashlyticsService.log('update_required: optional');
@@ -166,7 +168,7 @@ function getStoreUrl(): string {
   if (Platform.OS === 'ios') {
     // App Store URL format: https://apps.apple.com/app/id{APP_ID}
     // App Store ID is unique per app and same across all regions/languages
-    // Hardcoded App Store ID: 6747171420 (from https://apps.apple.com/cz/app/fm-city-fest/id6747171420)
+    // TODO: Aktualizovat na správné App Store ID pro FC Zličín aplikaci
     const APP_STORE_ID = '6747171420';
     return `https://apps.apple.com/app/id${APP_STORE_ID}`;
   } else {
