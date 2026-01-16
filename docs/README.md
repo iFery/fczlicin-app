@@ -1,6 +1,6 @@
-# FMCityFest - Mobilní aplikace pro hudební festival
+# FC Zličín - Mobilní aplikace fotbalového klubu
 
-Mobilní aplikace pro hudební festival vyvinutá v React Native s Expo. Aplikace poskytuje program festivalu, informace o interpretech, osobní plán návštěvníka a push notifikace.
+Mobilní aplikace pro fotbalový klub FC Zličín vyvinutá v React Native s Expo. Přináší přehled zápasů a výsledků, tabulky, novinky, soupisku, osobní nastavení a push notifikace.
 
 ## 🚀 Technologie
 
@@ -15,8 +15,8 @@ Mobilní aplikace pro hudební festival vyvinutá v React Native s Expo. Aplikac
 
 - Node.js (v18 nebo novější)
 - npm nebo yarn
-- Expo CLI (`npm install -g expo-cli`)
-- EAS CLI (`npm install -g eas-cli`)
+- Expo CLI (`npx expo` – není potřeba globální instalace)
+- EAS CLI (`npm install -g eas-cli`) pro EAS Build
 - Firebase projekt s nakonfigurovanými službami:
   - Firebase Cloud Messaging (FCM)
   - Remote Config
@@ -29,23 +29,37 @@ Mobilní aplikace pro hudební festival vyvinutá v React Native s Expo. Aplikac
 npm install
 ```
 
-2. **Nastavte Firebase konfiguraci:**
+2. **Připravte Firebase konfiguraci:**
    - Stáhněte `google-services.json` z Firebase Console pro Android
    - Stáhněte `GoogleService-Info.plist` z Firebase Console pro iOS
-   - Umístěte tyto soubory do kořenového adresáře projektu
+   - Uložte soubory do `config/firebase/dev` (nebo `config/firebase/prod` pro produkci)
+   - Soubory jsou v `.gitignore` a do repozitáře se necommitují
 
-3. **Nastavte EAS projekt:**
+3. **Zkopírujte konfiguraci do nativních projektů:**
+```bash
+# development prostředí
+npm run firebase:dev
+
+# nebo produkční prostředí
+npm run firebase:prod
+```
+
+4. **(Volitelné) Nastavte EAS projekt:**
 ```bash
 eas login
 eas build:configure
 ```
 
-4. **Vytvořte development build a spusťte aplikaci:**
+5. **Vytvořte development build a spusťte aplikaci:**
 ```bash
 # Pro Android emulátor nebo USB připojené zařízení
-npx expo run:android
+npm run android
 
 # Pro iOS simulátor (pouze macOS)
+npm run ios
+
+# Nebo přímo, pokud už máte zkopírovanou Firebase konfiguraci
+npx expo run:android
 npx expo run:ios
 
 # Nebo vytvořte build přes EAS (viz EMULATOR_SETUP.md)
@@ -63,11 +77,11 @@ Viz také [EMULATOR_SETUP.md](./EMULATOR_SETUP.md) pro detailní návod pro emul
 
 ### Development build (lokálně - doporučeno)
 ```bash
-# Android
-npx expo run:android
+# Android (zajistí kopii Firebase configu)
+npm run android
 
 # iOS (pouze macOS)
-npx expo run:ios
+npm run ios
 ```
 
 ### Development build (EAS Build - cloud)
@@ -86,33 +100,44 @@ cd android && ./gradlew bundleRelease
 cd ios && xcodebuild ...
 ```
 
+**Poznámka**: Před produkčním buildem přepněte Firebase konfiguraci na `prod` (`npm run firebase:prod`).
+
 **Poznámka**: Firebase integrace vyžaduje custom build (expo-dev-client), protože Expo Go nepodporuje nativní Firebase moduly. **Nemusíte ale používat EAS Build** - můžete buildovat lokálně. Viz [BUILD_OPTIONS.md](./BUILD_OPTIONS.md) pro detailní vysvětlení všech možností.
 
 ## 🏗️ Struktura projektu
 
 ```
 src/
+├── api/
+│   ├── client.ts              # HTTP klient
+│   └── footballEndpoints.ts   # Zápasy, tabulky, tým
 ├── navigation/
 │   ├── AppNavigator.tsx      # Hlavní stack navigace
 │   └── TabNavigator.tsx      # Tab bar navigace
 ├── screens/
-│   ├── ProgramScreen.tsx     # Program festivalu
-│   ├── ArtistsScreen.tsx     # Seznam interpretů
-│   ├── FavoritesScreen.tsx   # Můj program / Oblíbené
-│   ├── InfoScreen.tsx        # Informace a mapy
-│   ├── SettingsScreen.tsx    # Nastavení aplikace
-│   ├── EventDetailScreen.tsx # Detail události
-│   └── ArtistDetailScreen.tsx # Detail interpreta
+│   ├── HomeScreen.tsx         # Přehled
+│   ├── MatchesListScreen.tsx  # Zápasy a výsledky
+│   ├── MatchDetailScreen.tsx  # Detail zápasu
+│   ├── StandingsScreen.tsx    # Tabulka soutěže
+│   ├── NewsScreen.tsx         # Novinky
+│   ├── NewsDetailScreen.tsx   # Detail novinky
+│   ├── TeamListScreen.tsx     # Soupiska
+│   ├── PlayerDetailScreen.tsx # Detail hráče
+│   ├── InfoScreen.tsx         # Informace o klubu
+│   └── SettingsScreen.tsx     # Nastavení aplikace
 ├── components/
-│   ├── EventCard.tsx         # Karta události
-│   └── ArtistCard.tsx        # Karta interpreta
+│   ├── MatchCard.tsx          # Karta zápasu
+│   ├── NewsCard.tsx           # Karta novinky
+│   └── NotificationPermissionModal.tsx # Soft-ask notifikací
 ├── services/
 │   ├── firebase.ts           # Firebase inicializace
 │   ├── notifications.ts      # Push notifikace (FCM)
 │   ├── remoteConfig.ts       # Remote Config služba
-│   └── crashlytics.ts        # Crashlytics služba
+│   ├── crashlytics.ts        # Crashlytics služba
+│   └── updateService.ts      # Kontrola update aplikace
 └── utils/
-    └── helpers.ts            # Pomocné funkce
+    ├── cacheManager.ts       # Cache a offline podpora
+    └── navigationValidation.ts # Validace navigace
 ```
 
 ## 🔔 Push notifikace
@@ -185,20 +210,21 @@ try {
 
 ### Ověření funkcionalit
 
-- ✅ Push notifikace fungují i když je app vypnutá
+- ✅ Push notifikace fungují i když je aplikace vypnutá
 - ✅ Remote Config změny se aplikují bez releasu
 - ✅ Crashlytics zaznamenává chyby
 - ✅ Navigace mezi obrazovkami funguje správně
 
 ## 📝 Konfigurace
 
-### app.json
+### app.config.js
 
-Hlavní konfigurační soubor Expo projektu. Obsahuje:
+Hlavní konfigurační soubor Expo projektu (nahrazuje `app.json`) s podporou prostředí. Obsahuje:
 - Název a slug aplikace
 - Bundle identifiers (iOS/Android)
-- Cesty k Firebase konfiguračním souborům
+- Cesty k Firebase konfiguračním souborům (kopírované skriptem)
 - Expo pluginy
+- `extra` konfiguraci (např. `API_URL`, `EAS_PROJECT_ID`)
 
 ### eas.json
 
@@ -210,8 +236,8 @@ Konfigurace pro EAS Build s profily:
 ## 🔐 Bezpečnost
 
 - Firebase konfigurační soubory (`google-services.json`, `GoogleService-Info.plist`) jsou v `.gitignore`
-- Tyto soubory musí být přidány do projektu před buildu
-- Pro CI/CD použijte EAS Secrets pro citlivé údaje
+- Ukládejte je do `config/firebase/<env>` a kopírujte skriptem `npm run firebase:dev` / `npm run firebase:prod`
+- Pro CI/CD použijte EAS Secrets nebo bezpečné environment variables
 
 ## 🚧 Vývoj
 
@@ -244,11 +270,10 @@ Pro dotazy a podporu kontaktujte vývojový tým.
 
 ---
 
-**Poznámka**: Toto je skeleton aplikace. Pro produkční použití je nutné:
-- Přidat skutečná data z API
-- Implementovat autentizaci uživatelů
-- Přidat další funkcionality podle požadavků
-- Nastavit CI/CD pipeline
-- Přidat automatické testy
+**Poznámka**: Před produkčním nasazením ověřte nebo doplňte:
+- Stabilní API a data (nastavení `API_URL`)
+- Autentizaci uživatelů (pokud je vyžadována)
+- CI/CD pipeline
+- Automatické testy
 
 
