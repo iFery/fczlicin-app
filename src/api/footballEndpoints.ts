@@ -233,48 +233,48 @@ export interface NotificationPreferencesResponse {
 
 /**
  * Notification preferences API
- * Note: These endpoints need to be implemented on the backend
+ * Uses the notification management API endpoint
  */
 export const notificationApi = {
   /**
    * Register device token with notification preferences
+   * POST /administrace/mobile-notification/api_notifications.php
    * @param preferences Notification preferences including token and team selections
    */
   registerDeviceToken: (preferences: NotificationPreferences) =>
     apiClient.post<NotificationPreferencesResponse>(
-      '/api/notifications/register',
+      '/administrace/mobile-notification/api_notifications.php',
       preferences
     ).then(res => res.data).catch((error) => {
-      // If endpoint doesn't exist yet, log and return success for graceful degradation
-      console.warn('Notification registration endpoint not available:', error);
-      return { success: false, message: 'Endpoint not implemented' };
+      console.error('Notification registration failed:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Registration failed' };
     }),
   
   /**
    * Update notification preferences for existing token
+   * PUT /administrace/mobile-notification/api_notifications.php
    * @param preferences Updated notification preferences
    */
   updatePreferences: (preferences: NotificationPreferences) =>
     apiClient.put<NotificationPreferencesResponse>(
-      '/api/notifications/preferences',
+      '/administrace/mobile-notification/api_notifications.php',
       preferences
     ).then(res => res.data).catch((error) => {
-      // If endpoint doesn't exist yet, log and return success for graceful degradation
-      console.warn('Notification preferences update endpoint not available:', error);
-      return { success: false, message: 'Endpoint not implemented' };
+      console.error('Notification preferences update failed:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Update failed' };
     }),
   
   /**
    * Unregister device token (disable notifications)
+   * DELETE /administrace/mobile-notification/api_notifications.php?token=XXX
    * @param token Device FCM token
    */
   unregisterDeviceToken: (token: string) =>
     apiClient.delete<NotificationPreferencesResponse>(
-      `/api/notifications/token/${encodeURIComponent(token)}`
+      `/administrace/mobile-notification/api_notifications.php?token=${encodeURIComponent(token)}`
     ).then(res => res.data).catch((error) => {
-      // If endpoint doesn't exist yet, log and return success for graceful degradation
-      console.warn('Notification unregistration endpoint not available:', error);
-      return { success: false, message: 'Endpoint not implemented' };
+      console.error('Notification unregistration failed:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unregistration failed' };
     }),
 };
 

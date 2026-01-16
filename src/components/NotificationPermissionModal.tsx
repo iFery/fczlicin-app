@@ -1,6 +1,7 @@
 /**
  * Notification Permission Modal
- * Custom "soft ask" screen with festival-style design
+ * Custom "soft ask" screen for FC Zličín football app
+ * Best practice: Show once on first launch, allow user to dismiss
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -13,6 +14,7 @@ import {
   Animated,
   Dimensions,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -32,36 +34,45 @@ export default function NotificationPermissionModal({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const logoScaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (visible) {
       fadeAnim.setValue(0);
       slideAnim.setValue(30);
       pulseAnim.setValue(1);
+      logoScaleAnim.setValue(0.8);
 
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 400,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 300,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(logoScaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
           useNativeDriver: true,
         }),
       ]).start();
 
+      // Pulse animation for notification bell icon
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.08,
-            duration: 1500,
+            toValue: 1.1,
+            duration: 1200,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 1500,
+            duration: 1200,
             useNativeDriver: true,
           }),
         ])
@@ -70,8 +81,9 @@ export default function NotificationPermissionModal({
       fadeAnim.setValue(0);
       slideAnim.setValue(30);
       pulseAnim.setValue(1);
+      logoScaleAnim.setValue(0.8);
     }
-  }, [visible, fadeAnim, slideAnim, pulseAnim]);
+  }, [visible, fadeAnim, slideAnim, pulseAnim, logoScaleAnim]);
 
   if (!visible) {
     return null;
@@ -105,6 +117,23 @@ export default function NotificationPermissionModal({
           ]}
         >
           <View style={styles.modalCard}>
+            {/* Logo with animation */}
+            <Animated.View
+              style={[
+                styles.logoContainer,
+                {
+                  transform: [{ scale: logoScaleAnim }],
+                },
+              ]}
+            >
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </Animated.View>
+
+            {/* Notification bell icon with pulse */}
             <Animated.View
               style={[
                 styles.iconContainer,
@@ -113,13 +142,13 @@ export default function NotificationPermissionModal({
                 },
               ]}
             >
-              <Ionicons name="notifications" size={56} color="#4ECAC6" />
+              <Ionicons name="notifications" size={48} color="#014fa1" />
             </Animated.View>
 
-            <Text style={styles.title}>Nezmeškej nic z FM CITY FESTu 🔔</Text>
+            <Text style={styles.title}>Nezmeškej žádný zápas! 🔔</Text>
 
             <Text style={styles.bodyText}>
-              Povol notifikace a dostávej důležité informace o festivalu – změny programu, začátky koncertů a speciální akce.
+              Povol notifikace a dostávej důležité informace o zápasech FC Zličín – připomínky před začátkem zápasů, výsledky a další novinky.
             </Text>
 
             <TouchableOpacity
@@ -128,7 +157,7 @@ export default function NotificationPermissionModal({
               style={styles.primaryButton}
             >
               <View style={styles.primaryButtonInner}>
-                <Text style={styles.primaryButtonText}>Ano, chci být v obraze</Text>
+                <Text style={styles.primaryButtonText}>Povolit notifikace</Text>
               </View>
             </TouchableOpacity>
 
@@ -156,7 +185,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(6, 25, 40, 0.85)',
+    backgroundColor: 'rgba(1, 79, 161, 0.9)', // FC Zličín blue with transparency
   },
   modalContainer: {
     width: width * 0.9,
@@ -166,57 +195,68 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
-    borderRadius: 22,
-    backgroundColor: '#0B2A3A',
-    padding: 28,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    padding: 32,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 10,
     },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(78, 202, 198, 0.1)',
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 20,
+  },
+  logoContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   iconContainer: {
     marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(1, 79, 161, 0.1)',
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#014fa1',
     textAlign: 'center',
     marginBottom: 16,
-    lineHeight: 28,
+    lineHeight: 30,
   },
   bodyText: {
     fontSize: 16,
-    color: '#D0D0D0',
+    color: '#666666',
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 32,
     lineHeight: 24,
     paddingHorizontal: 8,
   },
   primaryButton: {
     width: '100%',
     marginBottom: 12,
-    borderRadius: 15,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   primaryButtonInner: {
-    backgroundColor: '#2BC0E4',
+    backgroundColor: '#014fa1',
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
-    borderRadius: 15,
-    shadowColor: '#2BC0E4',
+    minHeight: 56,
+    borderRadius: 16,
+    shadowColor: '#014fa1',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -236,7 +276,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   secondaryButtonText: {
-    color: 'rgba(208, 208, 208, 0.6)',
+    color: '#999999',
     fontSize: 16,
     fontWeight: '500',
   },

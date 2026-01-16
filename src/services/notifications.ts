@@ -214,6 +214,7 @@ class NotificationService {
           },
         },
         trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: seconds,
         },
       });
@@ -324,6 +325,7 @@ class NotificationService {
                 },
               },
               trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
                 date: notificationTime.toDate(),
               },
             });
