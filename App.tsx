@@ -112,8 +112,13 @@ function AppContent() {
   }, [isLoading]);
 
   // Handle app fade-in when ready (not showing update screen or notification screen)
+  // IMPORTANT: This should only run if notification screen is NOT going to show
+  // Notification screen has priority and will handle its own transition
   useEffect(() => {
-    if (!isLoading && isReady && !showUpdateScreen && !showNotificationScreen && !showApp && !isUpdateRequired && !isUpdateOptional) {
+    // Don't start app fade-in if notification screen might show (check first)
+    const mightShowNotification = Platform.OS !== 'web' && shouldShowPrompt && shouldShowPrompt();
+    
+    if (!isLoading && isReady && !showUpdateScreen && !showNotificationScreen && !showApp && !isUpdateRequired && !isUpdateOptional && !mightShowNotification) {
       const now = Date.now();
       const elapsed = loadingStartTime.current ? now - loadingStartTime.current : 0;
       const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsed);
@@ -139,7 +144,7 @@ function AppContent() {
         });
       }, remainingTime);
     }
-  }, [isLoading, isReady, showLoading, showApp, showUpdateScreen, showNotificationScreen, isUpdateRequired, isUpdateOptional, loadingOpacity, appOpacity]);
+  }, [isLoading, isReady, showLoading, showApp, showUpdateScreen, showNotificationScreen, isUpdateRequired, isUpdateOptional, shouldShowPrompt, loadingOpacity, appOpacity]);
 
   // Handle optional update skip (when user clicks "Later")
   const handleUpdateLater = async () => {
@@ -154,10 +159,13 @@ function AppContent() {
   };
 
   // Show notification permission screen when app is ready (before main app)
+  // This has PRIORITY over app fade-in - check this FIRST
   useEffect(() => {
     if (isReady && !showUpdateScreen && !showNotificationScreen && !showApp && Platform.OS !== 'web') {
       // Check if we should show the prompt
-      if (shouldShowPrompt()) {
+      const shouldShow = shouldShowPrompt();
+      
+      if (shouldShow) {
         // Small delay to ensure app is fully rendered
         const timer = setTimeout(() => {
           setShowNotificationScreen(true);
@@ -179,35 +187,14 @@ function AppContent() {
             setShowLoading(false);
           });
         }, 500);
-        return () => clearTimeout(timer);
-      } else {
-        // Don't show notification screen, proceed to app
-        const now = Date.now();
-        const elapsed = loadingStartTime.current ? now - loadingStartTime.current : 0;
-        const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsed);
-
-        setTimeout(() => {
-          setShowApp(true);
-          Animated.parallel([
-            Animated.timing(loadingOpacity, {
-              toValue: 0,
-              duration: FADE_DURATION,
-              easing: Easing.out(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(appOpacity, {
-              toValue: 1,
-              duration: FADE_DURATION,
-              easing: Easing.out(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            setShowLoading(false);
-          });
-        }, remainingTime);
+        return () => {
+          clearTimeout(timer);
+        };
       }
+      // If shouldShow is false, don't show notification screen
+      // App fade-in will handle showing the app (in separate useEffect)
     }
-  }, [isReady, showUpdateScreen, showNotificationScreen, showApp, shouldShowPrompt, loadingOpacity, notificationScreenOpacity, appOpacity]);
+  }, [isReady, showUpdateScreen, showNotificationScreen, showApp, shouldShowPrompt, loadingOpacity, notificationScreenOpacity]);
 
   // Handle notification screen completion
   const handleNotificationScreenComplete = () => {
@@ -355,14 +342,37 @@ export default function App() {
 
 function AppContentWithTimeline() {
   const { timelineData } = useBootstrap();
-  const [fontsLoaded] = useFonts({
+  // Try to load fonts using useFonts hook (for runtime loading)
+  // Fonts are also embedded via expo-font config plugin, so they should be available immediately
+  const [fontsLoaded, fontError] = useFonts({
     'Rajdhani-Regular': Rajdhani_400Regular,
     'Rajdhani-Medium': Rajdhani_500Medium,
     'Rajdhani-SemiBold': Rajdhani_600SemiBold,
     'Rajdhani-Bold': Rajdhani_700Bold,
   });
+  const [fontsTimeout, setFontsTimeout] = useState(false);
 
-  if (!fontsLoaded) {
+  useEffect(() => {
+    if (fontError) {
+      console.error('❌ [AppContentWithTimeline] Font loading error:', fontError);
+      // If there's an error, proceed anyway - fonts are embedded via config plugin
+      setFontsTimeout(true);
+    }
+    
+    // Timeout fallback: pokud se fonty nenačtou do 2 sekund, pokračuj bez nich
+    // Fonty jsou embedované pomocí config pluginu, takže by měly být dostupné okamžitě
+    const timeout = setTimeout(() => {
+      if (!fontsLoaded && !fontError) {
+        setFontsTimeout(true);
+      }
+    }, 2000);
+    
+    return () => clearTimeout(timeout);
+  }, [fontsLoaded, fontError]);
+
+  // Pokračuj, pokud jsou fonty načtené NEBO pokud uplynul timeout NEBO pokud je chyba
+  // Fonty jsou embedované pomocí config pluginu, takže by měly být dostupné i bez runtime loading
+  if (!fontsLoaded && !fontsTimeout && !fontError) {
     return <LoadingScreen />; // Show loading screen while fonts are loading
   }
   

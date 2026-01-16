@@ -23,7 +23,7 @@ if (!ENVIRONMENTS.includes(environment)) {
 const rootDir = path.resolve(__dirname, '..');
 const configDir = path.join(rootDir, 'config', 'firebase', environment);
 const androidTarget = path.join(rootDir, 'android', 'app', 'google-services.json');
-const iosTarget = path.join(rootDir, 'ios', 'FMCityFest', 'GoogleService-Info.plist');
+const iosTarget = path.join(rootDir, 'ios', 'FCZlicin', 'GoogleService-Info.plist');
 
 const androidSource = path.join(configDir, 'google-services.json');
 const iosSource = path.join(configDir, 'GoogleService-Info.plist');
