@@ -1,4 +1,4 @@
-package cz.fczlicin.app
+package com.fczlin
 
 import android.os.Build
 import android.os.Bundle

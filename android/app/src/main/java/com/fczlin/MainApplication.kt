@@ -1,4 +1,4 @@
-package cz.fczlicin.app
+package com.fczlin
 
 import android.app.Application
 import android.content.res.Configuration
