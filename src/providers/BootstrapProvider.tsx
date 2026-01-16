@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { preloadAllData, preloadCurrentSeasonData } from '../services/preloadService';
 import { hasAnyValidCache, getOldestCacheAge, loadFromCache, checkAndClearCacheOnVersionUpgrade } from '../utils/cacheManager';
 import { crashlyticsService } from '../services/crashlytics';
-import { initializeFirebase } from '../services/firebase';
+import { initializeFirebase, ensureFirebaseInitialized } from '../services/firebase';
 import { remoteConfigService } from '../services/remoteConfig';
 import { notificationService } from '../services/notifications';
 import { Platform } from 'react-native';
@@ -49,6 +49,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   const [retryKey, setRetryKey] = useState(0);
   const [timelineData, setTimelineData] = useState<TimelineApiResponse | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [lastInternetState, setLastInternetState] = useState<boolean | null>(null);
 
   // Run bootstrap with proper cleanup and mounted checks
   useEffect(() => {
@@ -60,23 +61,29 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         if (!isMounted || abortController.signal.aborted) return;
         setState('loading');
         
-        crashlyticsService.log('bootstrap_start');
-        crashlyticsService.setAttribute('bootstrap_attempt', String(retryKey + 1));
-
-        // Initialize Firebase first (required for Crashlytics)
+        // Initialize Firebase FIRST - before any Firebase service calls
+        // This is critical - Firebase must be initialized before crashlytics, messaging, etc.
+        // We use ensureFirebaseInitialized which waits for auto-initialization
         try {
+          // First ensure Firebase is initialized (waits for auto-init from google-services.json)
+          await ensureFirebaseInitialized();
+          // Then initialize Firebase services (Remote Config, Crashlytics)
           await initializeFirebase();
           if (!isMounted || abortController.signal.aborted) return;
-          crashlyticsService.log('Firebase initialized');
         } catch (firebaseError) {
-          // Continue even if Firebase fails
+          console.error('❌ Firebase initialization failed:', firebaseError);
+          // Continue even if Firebase fails, but log it
         }
 
-        // Setup Crashlytics attributes
+        // Now we can safely use Firebase services
         try {
+          crashlyticsService.log('bootstrap_start');
+          crashlyticsService.setAttribute('bootstrap_attempt', String(retryKey + 1));
           crashlyticsService.setAttribute('platform', Platform.OS);
+          crashlyticsService.log('Firebase initialized');
         } catch (e) {
           // Ignore if Crashlytics is not available
+          console.warn('Crashlytics not available:', e);
         }
 
         // Check for app version upgrade and clear cache if needed
@@ -95,6 +102,9 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         if (!isMounted || abortController.signal.aborted) return;
         
         const isInternetReachable = netInfoState.isInternetReachable ?? false;
+        
+        // Store internet state for skipUpdate optimization
+        setLastInternetState(isInternetReachable);
         
         crashlyticsService.setAttribute('internet_reachable', String(isInternetReachable));
         crashlyticsService.log(`Internet reachable: ${isInternetReachable}`);
@@ -146,9 +156,10 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
               crashlyticsService.log('FCM Token registered');
             }
             // Store listeners (they live for app lifetime, no cleanup needed)
-            notificationService.setupNotificationListeners();
+            await notificationService.setupNotificationListeners();
           } catch (notifError) {
             // Ignore notification setup errors
+            console.warn('Notification setup failed:', notifError);
           }
         }
 
@@ -314,8 +325,24 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
     if (updateInfo?.latestVersion) {
       await AsyncStorage.setItem(UPDATE_SKIP_KEY, updateInfo.latestVersion);
       crashlyticsService.log('update_skipped_by_user');
-      // Retry bootstrap - it will see the skipped version and continue
-      setRetryKey((prev) => prev + 1);
+      
+      // Optimize: Instead of restarting bootstrap, quickly check internet and set ready state
+      // This is much faster than restarting the entire bootstrap process
+      try {
+        const netInfoState = await NetInfo.fetch();
+        const isInternetReachable = netInfoState.isInternetReachable ?? false;
+        setLastInternetState(isInternetReachable);
+        
+        // Set state directly to ready without restarting bootstrap
+        // We already have timelineData from previous bootstrap run
+        const readyState = isInternetReachable ? 'ready-online' : 'ready-offline';
+        setState(readyState);
+        crashlyticsService.log(`update_skipped_quick_transition_to_${readyState}`);
+      } catch (error) {
+        // Fallback: if quick check fails, restart bootstrap (slower but safe)
+        crashlyticsService.log('update_skipped_fallback_to_bootstrap_restart');
+        setRetryKey((prev) => prev + 1);
+      }
     }
   }, [updateInfo]);
 

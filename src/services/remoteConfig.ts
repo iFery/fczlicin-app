@@ -1,5 +1,6 @@
 import remoteConfig from '@react-native-firebase/remote-config';
 import crashlytics from '@react-native-firebase/crashlytics';
+import { ensureFirebaseInitialized, isFirebaseReady } from './firebase';
 
 class RemoteConfigService {
   private defaultConfig = {
@@ -30,6 +31,9 @@ class RemoteConfigService {
    */
   async initialize(skipFetch: boolean = false): Promise<void> {
     try {
+      // Zajisti, že Firebase je inicializován
+      await ensureFirebaseInitialized();
+      
       await remoteConfig().setDefaults(this.defaultConfig);
       if (!skipFetch) {
         await this.fetchAndActivate();
@@ -39,7 +43,9 @@ class RemoteConfigService {
     } catch (error) {
       console.error('Error initializing Remote Config:', error);
       try {
-        crashlytics().recordError(error as Error);
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
       } catch (e) {
         // Crashlytics možná ještě není inicializován
         console.error('Could not record error to Crashlytics:', e);
@@ -52,13 +58,22 @@ class RemoteConfigService {
    */
   async fetchAndActivate(): Promise<boolean> {
     try {
+      // Zajisti, že Firebase je inicializován
+      await ensureFirebaseInitialized();
+      
       await remoteConfig().fetch();
       const activated = await remoteConfig().activate();
       console.log('Remote Config activated:', activated);
       return activated;
     } catch (error) {
       console.error('Error fetching Remote Config:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Crashlytics možná není dostupný
+      }
       return false;
     }
   }
@@ -68,6 +83,10 @@ class RemoteConfigService {
    */
   getString(key: string, defaultValue: string = ''): string {
     try {
+      if (!isFirebaseReady()) {
+        console.warn('Remote Config: Firebase not ready, returning default value');
+        return defaultValue;
+      }
       return remoteConfig().getValue(key).asString();
     } catch (error) {
       console.error(`Error getting Remote Config string for key ${key}:`, error);
@@ -81,6 +100,10 @@ class RemoteConfigService {
    */
   getBoolean(key: string, defaultValue: boolean = false): boolean {
     try {
+      if (!isFirebaseReady()) {
+        console.warn('Remote Config: Firebase not ready, returning default value');
+        return defaultValue;
+      }
       const value = remoteConfig().getValue(key);
       // Pokud je hodnota boolean, použij ji přímo
       if (value.getSource() === 'default' || value.getSource() === 'remote') {
@@ -103,6 +126,10 @@ class RemoteConfigService {
    */
   getNumber(key: string, defaultValue: number = 0): number {
     try {
+      if (!isFirebaseReady()) {
+        console.warn('Remote Config: Firebase not ready, returning default value');
+        return defaultValue;
+      }
       return remoteConfig().getValue(key).asNumber();
     } catch (error) {
       console.error(`Error getting Remote Config number for key ${key}:`, error);
@@ -115,6 +142,10 @@ class RemoteConfigService {
    */
   getAll(): Record<string, any> {
     try {
+      if (!isFirebaseReady()) {
+        console.warn('Remote Config: Firebase not ready, returning empty object');
+        return {};
+      }
       const all = remoteConfig().getAll();
       const result: Record<string, any> = {};
       
