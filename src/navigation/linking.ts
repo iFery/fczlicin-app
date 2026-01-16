@@ -23,6 +23,12 @@ export const linking = {
       Home: {
         screens: {
           HomeMain: 'home',
+          MatchDetail: {
+            path: 'match/:matchId',
+            parse: {
+              matchId: (matchId: string) => matchId,
+            },
+          },
           NewsDetail: {
             path: 'news/:newsId',
             parse: {

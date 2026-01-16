@@ -10,12 +10,11 @@ import com.facebook.react.ReactPackage
 import com.facebook.react.ReactHost
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactNativeHost
+import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-
-import com.google.firebase.FirebaseApp
 
 class MainApplication : Application(), ReactApplication {
 
@@ -23,9 +22,10 @@ class MainApplication : Application(), ReactApplication {
         this,
         object : DefaultReactNativeHost(this) {
           override fun getPackages(): List<ReactPackage> {
+            val packages = PackageList(this).packages
             // Packages that cannot be autolinked yet can be added manually here, for example:
             // packages.add(new MyReactNativePackage());
-            return PackageList(this).packages
+            return packages
           }
 
           override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
@@ -42,26 +42,7 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
-    
-    // CRITICAL: Initialize Firebase FIRST, before any other initialization
-    // This ensures Firebase is ready before @react-native-firebase/crashlytics native module
-    // tries to initialize. Without this, we get "Default FirebaseApp is not initialized" error.
-    // React Native Firebase should auto-initialize from google-services.json, but in some
-    // Expo + Dev Client configurations this doesn't happen early enough.
-    try {
-      if (FirebaseApp.getApps(this).isEmpty()) {
-        android.util.Log.d("MainApplication", "Initializing Firebase explicitly...")
-        FirebaseApp.initializeApp(this)
-        android.util.Log.d("MainApplication", "Firebase initialized successfully")
-      } else {
-        android.util.Log.d("MainApplication", "Firebase already initialized")
-      }
-    } catch (e: Exception) {
-      // Log but don't crash - React Native Firebase will handle initialization
-      android.util.Log.w("MainApplication", "Firebase initialization attempt: ${e.message}", e)
-    }
-    
-    SoLoader.init(this, false)
+    SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
       load()

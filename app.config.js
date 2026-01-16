@@ -16,9 +16,9 @@ module.exports = ({ config }) => {
   // Build script copies files from config/firebase/{env}/ to standard locations
   // Standard locations (used by native builds):
   // - Android: android/app/google-services.json
-  // - iOS: ios/FMCityFest/GoogleService-Info.plist
+  // - iOS: ios/FCZlicin/GoogleService-Info.plist
   const androidGoogleServicesFile = './android/app/google-services.json';
-  const iosGoogleServicesFile = './ios/FMCityFest/GoogleService-Info.plist';
+  const iosGoogleServicesFile = './ios/FCZlicin/GoogleService-Info.plist';
 
   return {
     ...config,
@@ -26,7 +26,7 @@ module.exports = ({ config }) => {
       ...config.expo,
       name: 'FC Zličín',
       slug: 'fczlicin-app',
-      version: '1.0.0',
+      version: '1.1.0',
       orientation: 'portrait',
       scheme: 'fczlicin',
       icon: './assets/icon.png',
@@ -54,6 +54,37 @@ module.exports = ({ config }) => {
         favicon: './assets/favicon.png',
       },
       plugins: [
+        'expo-asset',
+        [
+          'expo-font',
+          {
+            fonts: [
+              './assets/fonts/Rajdhani_400Regular.ttf',
+              './assets/fonts/Rajdhani_500Medium.ttf',
+              './assets/fonts/Rajdhani_600SemiBold.ttf',
+              './assets/fonts/Rajdhani_700Bold.ttf',
+            ],
+          },
+        ],
+        [
+          'expo-build-properties',
+          {
+            android: {
+              // Google Play requirement: targetSdkVersion 35 (Android 15) from August 31, 2025
+              compileSdkVersion: 35,
+              targetSdkVersion: 35, // KRITICKÉ - požadavek Google Play
+              buildToolsVersion: '35.0.0',
+              minSdkVersion: 24, // Expo SDK 52 default (was 23 in SDK 51)
+            },
+            ios: {
+              // Force Objective-C AppDelegate for Firebase compatibility
+              // Firebase plugin requires Objective-C, not Swift
+              useFrameworks: 'static',
+              // Expo SDK 52 requires iOS 15.1+ (was 13.4 in SDK 51)
+              deploymentTarget: '15.1',
+            },
+          },
+        ],
         [
           'expo-notifications',
           {
