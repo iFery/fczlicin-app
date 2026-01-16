@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, StatusBar, Animated, Image, Easing } from 'react-native';
+import { View, StyleSheet, StatusBar, Animated, Image, Easing, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
@@ -14,7 +14,9 @@ import { ThemeProvider } from './src/theme/ThemeProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 import { OfflineBlockedScreen } from './src/screens/OfflineBlockedScreen';
 import { UpdateScreen } from './src/screens/UpdateScreen';
+import { NotificationPermissionScreen } from './src/screens/NotificationPermissionScreen';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { useNotificationPromptStore } from './src/stores/notificationPromptStore';
 
 const MIN_LOADING_TIME = 300;
 const FADE_DURATION = 300;
@@ -37,10 +39,15 @@ function AppContent() {
   const loadingOpacity = useRef(new Animated.Value(1)).current;
   const appOpacity = useRef(new Animated.Value(0)).current;
   const updateScreenOpacity = useRef(new Animated.Value(0)).current;
+  const notificationScreenOpacity = useRef(new Animated.Value(0)).current;
   const [showLoading, setShowLoading] = useState(true);
   const [showApp, setShowApp] = useState(false);
   const [showUpdateScreen, setShowUpdateScreen] = useState(false);
+  const [showNotificationScreen, setShowNotificationScreen] = useState(false);
   const loadingStartTime = useRef<number | null>(null);
+  
+  // Notification permission screen state
+  const { shouldShowPrompt } = useNotificationPromptStore();
 
   const isLoading = state === 'loading';
   const isBlocked = state === 'offline-blocked';
@@ -72,6 +79,31 @@ function AppContent() {
     }
   }, [isUpdateRequired, isUpdateOptional, updateInfo, showUpdateScreen, updateScreenOpacity, loadingOpacity]);
 
+  // Handle update screen fade-out when user skips optional update
+  useEffect(() => {
+    if (showUpdateScreen && !isUpdateRequired && !isUpdateOptional && isReady) {
+      // Update screen should be hidden, fade it out and show app
+      Animated.timing(updateScreenOpacity, {
+        toValue: 0,
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        setShowUpdateScreen(false);
+        // Reset loading start time for immediate app display after skipping update
+        loadingStartTime.current = Date.now();
+        // Now show the app immediately (user already waited for update screen)
+        setShowApp(true);
+        Animated.timing(appOpacity, {
+          toValue: 1,
+          duration: FADE_DURATION,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      });
+    }
+  }, [showUpdateScreen, isUpdateRequired, isUpdateOptional, isReady, updateScreenOpacity, appOpacity]);
+
   // Handle loading screen timing
   useEffect(() => {
     if (isLoading && loadingStartTime.current === null) {
@@ -79,9 +111,9 @@ function AppContent() {
     }
   }, [isLoading]);
 
-  // Handle app fade-in when ready (not showing update screen)
+  // Handle app fade-in when ready (not showing update screen or notification screen)
   useEffect(() => {
-    if (!isLoading && isReady && showLoading && !showApp && !isUpdateRequired && !isUpdateOptional) {
+    if (!isLoading && isReady && !showUpdateScreen && !showNotificationScreen && !showApp && !isUpdateRequired && !isUpdateOptional) {
       const now = Date.now();
       const elapsed = loadingStartTime.current ? now - loadingStartTime.current : 0;
       const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsed);
@@ -107,7 +139,7 @@ function AppContent() {
         });
       }, remainingTime);
     }
-  }, [isLoading, isReady, showLoading, showApp, isUpdateRequired, isUpdateOptional, loadingOpacity, appOpacity]);
+  }, [isLoading, isReady, showLoading, showApp, showUpdateScreen, showNotificationScreen, isUpdateRequired, isUpdateOptional, loadingOpacity, appOpacity]);
 
   // Handle optional update skip (when user clicks "Later")
   const handleUpdateLater = async () => {
@@ -119,6 +151,84 @@ function AppContent() {
     // For forced updates, we still open store but don't change state
     // User must update to continue
     // For optional updates, opening store is enough - they can update or not
+  };
+
+  // Show notification permission screen when app is ready (before main app)
+  useEffect(() => {
+    if (isReady && !showUpdateScreen && !showNotificationScreen && !showApp && Platform.OS !== 'web') {
+      // Check if we should show the prompt
+      if (shouldShowPrompt()) {
+        // Small delay to ensure app is fully rendered
+        const timer = setTimeout(() => {
+          setShowNotificationScreen(true);
+          // Fade out loading, fade in notification screen
+          Animated.parallel([
+            Animated.timing(loadingOpacity, {
+              toValue: 0,
+              duration: FADE_DURATION,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(notificationScreenOpacity, {
+              toValue: 1,
+              duration: FADE_DURATION,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            setShowLoading(false);
+          });
+        }, 500);
+        return () => clearTimeout(timer);
+      } else {
+        // Don't show notification screen, proceed to app
+        const now = Date.now();
+        const elapsed = loadingStartTime.current ? now - loadingStartTime.current : 0;
+        const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsed);
+
+        setTimeout(() => {
+          setShowApp(true);
+          Animated.parallel([
+            Animated.timing(loadingOpacity, {
+              toValue: 0,
+              duration: FADE_DURATION,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(appOpacity, {
+              toValue: 1,
+              duration: FADE_DURATION,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            setShowLoading(false);
+          });
+        }, remainingTime);
+      }
+    }
+  }, [isReady, showUpdateScreen, showNotificationScreen, showApp, shouldShowPrompt, loadingOpacity, notificationScreenOpacity, appOpacity]);
+
+  // Handle notification screen completion
+  const handleNotificationScreenComplete = () => {
+    // Fade out notification screen, fade in app
+    Animated.parallel([
+      Animated.timing(notificationScreenOpacity, {
+        toValue: 0,
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(appOpacity, {
+        toValue: 1,
+        duration: FADE_DURATION,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowNotificationScreen(false);
+      setShowApp(true);
+    });
   };
 
   // Update screen - show for forced or optional updates
@@ -161,6 +271,39 @@ function AppContent() {
   // Offline blocked - show blocking screen only
   if (isBlocked) {
     return <OfflineBlockedScreen />;
+  }
+
+  // Notification permission screen - shown before main app on first launch
+  if (showNotificationScreen && isReady) {
+    return (
+      <View style={styles.appContainer}>
+        <Animated.View
+          style={[
+            styles.notificationWrapper,
+            {
+              opacity: notificationScreenOpacity,
+            },
+          ]}
+          pointerEvents="auto"
+        >
+          <NotificationPermissionScreen onComplete={handleNotificationScreenComplete} />
+        </Animated.View>
+        {/* Keep loading screen behind for smooth transition */}
+        {showLoading && (
+          <Animated.View
+            style={[
+              styles.loadingWrapper,
+              {
+                opacity: loadingOpacity,
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <LoadingScreen />
+          </Animated.View>
+        )}
+      </View>
+    );
   }
 
   // Loading or ready states
@@ -244,6 +387,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   updateWrapper: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  notificationWrapper: {
     ...StyleSheet.absoluteFillObject,
   },
   container: {

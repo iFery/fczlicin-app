@@ -1,11 +1,12 @@
 import * as Notifications from 'expo-notifications';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
-import crashlytics from '@react-native-firebase/crashlytics';
 import { handleNotificationNavigation } from './notificationNavigation';
 import { TimelineApiResponse } from '../api/endpoints';
 import { loadFromCache } from '../utils/cacheManager';
 import { notificationApi } from '../api/footballEndpoints';
+import { ensureFirebaseInitialized, isFirebaseReady, safeMessagingCall } from './firebase';
+import { crashlyticsService } from './crashlytics';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
@@ -48,7 +49,7 @@ class NotificationService {
       return true;
     } catch (error) {
       console.error('Error requesting notification permissions:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
       return false;
     }
   }
@@ -64,6 +65,15 @@ class NotificationService {
         return null;
       }
 
+      // Zajisti, že Firebase je inicializován
+      await ensureFirebaseInitialized();
+
+      // Ověř, že Firebase je skutečně připraven
+      if (!isFirebaseReady()) {
+        console.warn('Firebase not ready after ensureFirebaseInitialized, cannot get token');
+        return null;
+      }
+
       // Zkontroluje oprávnění (nepožádá)
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== 'granted') {
@@ -71,15 +81,23 @@ class NotificationService {
         return null;
       }
 
-      // Získá FCM token
-      const token = await messaging().getToken();
-      this.fcmToken = token;
+      // Získá FCM token s bezpečným voláním (s automatickým retry)
+      const token = await safeMessagingCall(async (msg) => {
+        return await msg.getToken();
+      });
       
-      console.log('FCM Token:', token);
-      return token;
+      if (token) {
+        this.fcmToken = token;
+        console.log('FCM Token:', token);
+        return token;
+      } else {
+        console.warn('Failed to get FCM token after retries');
+        return null;
+      }
     } catch (error) {
       console.error('Error getting FCM token:', error);
-      crashlytics().recordError(error as Error);
+      // Crashlytics service už kontroluje inicializaci
+      crashlyticsService.recordError(error as Error);
       return null;
     }
   }
@@ -88,21 +106,57 @@ class NotificationService {
    * Nastaví listenery pro notifikace
    * Poznámka: Background message handler musí být registrován v index.js
    */
-  setupNotificationListeners() {
-    // Listener pro notifikace, když je aplikace na popředí
-    const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
-      console.log('Foreground notification received:', remoteMessage);
+  async setupNotificationListeners() {
+    try {
+      // Zajisti, že Firebase je inicializován
+      await ensureFirebaseInitialized();
       
-      // Zobrazí lokální notifikaci
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: remoteMessage.notification?.title || 'Nová notifikace',
-          body: remoteMessage.notification?.body || '',
-          data: remoteMessage.data,
-        },
-        trigger: null, // Okamžitě
+      // Ověř, že Firebase je skutečně připraven
+      if (!isFirebaseReady()) {
+        console.warn('Firebase not ready after ensureFirebaseInitialized, cannot setup listeners');
+        return {
+          unsubscribeForeground: () => {},
+          notificationListener: { remove: () => {} },
+        };
+      }
+    } catch (error) {
+      console.error('Firebase not initialized, cannot setup notification listeners:', error);
+      return {
+        unsubscribeForeground: () => {},
+        notificationListener: { remove: () => {} },
+      };
+    }
+
+    // Listener pro notifikace, když je aplikace na popředí
+    let unsubscribeForeground: (() => void) | null = null;
+    try {
+      if (!isFirebaseReady()) {
+        throw new Error('Firebase not ready');
+      }
+      
+      // Použijeme safeMessagingCall pro bezpečné nastavení listeneru
+      const unsubscribe = await safeMessagingCall((msg) => {
+        return msg.onMessage(async (remoteMessage) => {
+          console.log('Foreground notification received:', remoteMessage);
+          
+          // Zobrazí lokální notifikaci
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: remoteMessage.notification?.title || 'Nová notifikace',
+              body: remoteMessage.notification?.body || '',
+              data: remoteMessage.data,
+            },
+            trigger: null, // Okamžitě
+          });
+        });
       });
-    });
+      
+      unsubscribeForeground = unsubscribe || (() => {}); // Empty function as fallback
+    } catch (error) {
+      console.error('Error setting up foreground message listener:', error);
+      crashlyticsService.recordError(error as Error);
+      unsubscribeForeground = () => {}; // Empty function as fallback
+    }
 
     // Listener pro kliknutí na notifikaci
     // Works for both foreground and background/closed app states
@@ -118,7 +172,7 @@ class NotificationService {
     });
 
     return {
-      unsubscribeForeground,
+      unsubscribeForeground: unsubscribeForeground || (() => {}),
       notificationListener,
     };
   }
@@ -138,7 +192,7 @@ class NotificationService {
       });
     } catch (error) {
       console.error('Error sending test notification:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
       throw error;
     }
   }
@@ -166,7 +220,7 @@ class NotificationService {
       console.log(`Test notification scheduled for ${seconds} seconds`);
     } catch (error) {
       console.error('Error scheduling test notification:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
       throw error;
     }
   }
@@ -177,12 +231,31 @@ class NotificationService {
   async deleteToken(): Promise<void> {
     try {
       if (Platform.OS !== 'web') {
-        await messaging().deleteToken();
+        // Zajisti, že Firebase je inicializován
+        await ensureFirebaseInitialized();
+        
+        // Ověř, že Firebase je skutečně připraven
+        if (!isFirebaseReady()) {
+          console.warn('Firebase not ready, cannot delete token');
+          return;
+        }
+        
+        const result = await safeMessagingCall(async (msg) => {
+          await msg.deleteToken();
+          return true;
+        });
+        
+        if (result) {
+          this.fcmToken = null;
+        } else {
+          console.warn('Failed to delete FCM token after retries');
+        }
         this.fcmToken = null;
       }
     } catch (error) {
       console.error('Error deleting FCM token:', error);
-      crashlytics().recordError(error as Error);
+      // Crashlytics service už kontroluje inicializaci
+      crashlyticsService.recordError(error as Error);
     }
   }
 
@@ -256,13 +329,13 @@ class NotificationService {
             });
           } catch (error) {
             console.error(`Error scheduling notification for artist ${artistName}:`, error);
-            crashlytics().recordError(error as Error);
+            crashlyticsService.recordError(error as Error);
           }
         }
       }
     } catch (error) {
       console.error('Error scheduling artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
     }
   }
 
@@ -293,7 +366,7 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error cancelling artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
     }
   }
 
@@ -330,7 +403,7 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error cancelling all artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
     }
   }
 
@@ -360,7 +433,7 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error updating all artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
     }
   }
 
@@ -398,7 +471,8 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error registering device token with preferences:', error);
-      crashlytics().recordError(error as Error);
+      // Crashlytics service už kontroluje inicializaci
+      crashlyticsService.recordError(error as Error);
       return false;
     }
   }
@@ -437,7 +511,7 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error updating notification preferences:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
       return false;
     }
   }
@@ -463,7 +537,7 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error unregistering device token:', error);
-      crashlytics().recordError(error as Error);
+      crashlyticsService.recordError(error as Error);
       return false;
     }
   }
