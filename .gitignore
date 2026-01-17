@@ -58,6 +58,9 @@ config/firebase/dev/
 # Firebase config helper files (if any)
 # config/firebase-config.*.js
 
+# Backend API - contains server-side code, should not be in mobile app repo
+be-api/
+
 # Testing
 coverage/
 .nyc_output/
