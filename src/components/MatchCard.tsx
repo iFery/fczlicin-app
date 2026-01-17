@@ -4,9 +4,10 @@ import { useTheme } from '../theme/ThemeProvider';
 
 interface MatchCardProps {
   match: any;
+  teamName?: string; // Optional team name (e.g., "Muži A", "Muži B")
 }
 
-const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
+const MatchCard: React.FC<MatchCardProps> = ({ match, teamName }) => {
   const { globalStyles } = useTheme();
 
   const formatDate = (dateString: string) => {
@@ -84,7 +85,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
 
         <View style={styles.matchInfo}>
           <Text style={[globalStyles.subtitle, styles.roundText]}>
-            {match.round}.KOLO | {new Date(match.date).toLocaleDateString('cs-CZ', { weekday: 'long' }).toUpperCase()}
+            {match.round ? `${match.round}.` : ''}KOLO {teamName ? `| ${teamName.toUpperCase()}` : `| ${new Date(match.date).toLocaleDateString('cs-CZ', { weekday: 'long' }).toUpperCase()}`}
           </Text>
           <Text style={[globalStyles.caption, styles.matchDate]}>
             {formatDate(match.date)} {formatTime(match.date)}

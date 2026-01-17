@@ -60,7 +60,8 @@ function renderSharedScreens() {
           title: 'Hráč',
           headerStyle: { backgroundColor: '#014fa1' },
           headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' }
+          headerTitleStyle: { color: '#FFFFFF' },
+          headerBackTitleVisible: false, // Hide back button title on iOS
         }} 
       />
       <Stack.Screen 
@@ -161,7 +162,8 @@ function HomeStack() {
           title: 'Detail zápasu',
           headerStyle: { backgroundColor: '#014fa1' },
           headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' }
+          headerTitleStyle: { color: '#FFFFFF' },
+          headerBackTitleVisible: false, // Hide back button title on iOS
         }} 
       />
       {renderSharedScreens()}
@@ -181,7 +183,8 @@ function ProgramStack() {
           title: 'Detail zápasu',
           headerStyle: { backgroundColor: '#014fa1' },
           headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' }
+          headerTitleStyle: { color: '#FFFFFF' },
+          headerBackTitleVisible: false, // Hide back button title on iOS
         }} 
       />
       {renderSharedScreens()}

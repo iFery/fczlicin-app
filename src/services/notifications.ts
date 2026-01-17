@@ -1,16 +1,19 @@
 import * as Notifications from 'expo-notifications';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { handleNotificationNavigation } from './notificationNavigation';
-import { TimelineApiResponse } from '../api/endpoints';
-import { loadFromCache } from '../utils/cacheManager';
 import { notificationApi } from '../api/footballEndpoints';
 import { ensureFirebaseInitialized, isFirebaseReady, safeMessagingCall } from './firebase';
 import { crashlyticsService } from './crashlytics';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 
-dayjs.extend(utc);
+/**
+ * Get current environment from app config
+ * Returns 'production', 'staging', 'development', etc.
+ */
+function getCurrentEnvironment(): string {
+  return Constants.expoConfig?.extra?.environment || 'production';
+}
 
 /**
  * Configure notification handler
@@ -274,172 +277,6 @@ class NotificationService {
   }
 
   /**
-   * Naplánuje notifikace pro interpreta - 10 minut před každým jeho koncertem
-   */
-  async scheduleArtistNotifications(artistId: string, artistName: string): Promise<void> {
-    try {
-      // Zkontroluj oprávnění
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        return;
-      }
-
-      // Načti timeline data
-      const timelineData = await loadFromCache<TimelineApiResponse>('timeline');
-      if (!timelineData || !timelineData.events) {
-        return;
-      }
-
-      const numericArtistId = parseInt(artistId, 10);
-      const now = dayjs();
-
-      // Najdi všechny koncerty tohoto interpreta
-      const artistEvents = timelineData.events.filter(
-        (event) => event.interpret_id === numericArtistId && event.start
-      );
-
-      // Naplánuj notifikaci 10 minut před každým koncertem
-      for (const event of artistEvents) {
-        if (!event.start) continue;
-
-        const eventStart = dayjs(event.start);
-        const notificationTime = eventStart.subtract(10, 'minute');
-
-        // Naplánuj pouze budoucí notifikace
-        if (notificationTime.isAfter(now)) {
-          const notificationId = `artist_${artistId}_event_${event.id || event.start}`;
-
-          try {
-            await Notifications.scheduleNotificationAsync({
-              identifier: notificationId,
-              content: {
-                title: `${artistName} začíná za 10 minut!`,
-                body: event.name || `${artistName} na ${event.stage_name || event.stage || 'pódiu'}`,
-                data: {
-                  type: 'artist',
-                  artistId: artistId,
-                  artistName: artistName,
-                  eventId: event.id || String(event.start),
-                  eventName: event.name,
-                  stage: event.stage_name || event.stage,
-                },
-              },
-              trigger: {
-                type: Notifications.SchedulableTriggerInputTypes.DATE,
-                date: notificationTime.toDate(),
-              },
-            });
-          } catch (error) {
-            console.error(`Error scheduling notification for artist ${artistName}:`, error);
-            crashlyticsService.recordError(error as Error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error scheduling artist notifications:', error);
-      crashlyticsService.recordError(error as Error);
-    }
-  }
-
-  /**
-   * Zruší všechny naplánované notifikace pro interpreta
-   */
-  async cancelArtistNotifications(artistId: string): Promise<void> {
-    try {
-      // Získej všechny naplánované notifikace
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-
-      // Najdi a zruš všechny notifikace pro tohoto interpreta
-      const notificationsToCancel = scheduledNotifications.filter(
-        (notification) => {
-          const data = notification.content.data as Record<string, unknown> | undefined;
-          return data?.artistId === artistId || notification.identifier.startsWith(`artist_${artistId}_`);
-        }
-      );
-
-      // Zruš každou notifikaci
-      for (const notification of notificationsToCancel) {
-        try {
-          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-          console.log(`Cancelled notification ${notification.identifier}`);
-        } catch (error) {
-          console.error(`Error cancelling notification ${notification.identifier}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error('Error cancelling artist notifications:', error);
-      crashlyticsService.recordError(error as Error);
-    }
-  }
-
-  /**
-   * Zruší všechny naplánované notifikace pro interprety
-   * Používá se když se vypnou notifikace pro oblíbené interprety
-   */
-  async cancelAllArtistNotifications(): Promise<void> {
-    try {
-      // Zkontroluj oprávnění
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        return;
-      }
-
-      // Zruš všechny existující notifikace typu 'artist'
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      let cancelledCount = 0;
-      
-      for (const notification of scheduledNotifications) {
-        const data = notification.content.data as Record<string, unknown> | undefined;
-        if (data?.type === 'artist') {
-          try {
-            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-            cancelledCount++;
-          } catch (error) {
-            console.error(`Error cancelling notification ${notification.identifier}:`, error);
-          }
-        }
-      }
-
-      if (cancelledCount > 0) {
-        console.log(`Cancelled ${cancelledCount} artist notifications`);
-      }
-    } catch (error) {
-      console.error('Error cancelling all artist notifications:', error);
-      crashlyticsService.recordError(error as Error);
-    }
-  }
-
-  /**
-   * Aktualizuje notifikace pro všechny oblíbené interprety
-   * Volá se při změně oblíbených nebo při aktualizaci timeline
-   * Zruší všechny existující notifikace typu 'artist' a naplánuje nové pouze pro oblíbené interprety
-   */
-  async updateAllArtistNotifications(favoriteArtistIds: string[], artists: Array<{ id: string; name: string }>): Promise<void> {
-    try {
-      // Zkontroluj oprávnění
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        return;
-      }
-
-      // Zruš všechny existující notifikace typu 'artist'
-      // (to zahrnuje i ty pro interprety, kteří byli odebráni z oblíbených)
-      await this.cancelAllArtistNotifications();
-
-      // Naplánuj nové notifikace pouze pro aktuální oblíbené interprety
-      for (const artistId of favoriteArtistIds) {
-        const artist = artists.find((a) => a.id === artistId);
-        if (artist) {
-          await this.scheduleArtistNotifications(artistId, artist.name);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating all artist notifications:', error);
-      crashlyticsService.recordError(error as Error);
-    }
-  }
-
-  /**
    * Register device token with backend notification preferences
    * @param preferences Notification preferences including favorite teams and notification types
    */
@@ -456,12 +293,13 @@ class NotificationService {
         return false;
       }
 
-      // Register with backend
+      // Register with backend (include environment for filtering)
       const result = await notificationApi.registerDeviceToken({
         token,
         favoriteTeamIds: preferences.favoriteTeamIds,
         matchStartReminderEnabled: preferences.matchStartReminderEnabled,
         matchResultNotificationEnabled: preferences.matchResultNotificationEnabled,
+        environment: getCurrentEnvironment(),
       });
 
       if (result.success) {
@@ -496,12 +334,13 @@ class NotificationService {
         return false;
       }
 
-      // Update preferences on backend
+      // Update preferences on backend (include environment for filtering)
       const result = await notificationApi.updatePreferences({
         token,
         favoriteTeamIds: preferences.favoriteTeamIds,
         matchStartReminderEnabled: preferences.matchStartReminderEnabled,
         matchResultNotificationEnabled: preferences.matchResultNotificationEnabled,
+        environment: getCurrentEnvironment(),
       });
 
       if (result.success) {

@@ -4,54 +4,7 @@
  */
 
 import { apiClient } from './client';
-import type { Event, News } from '../types';
-
-/**
- * API Response type for timeline (events) endpoint
- */
-export interface TimelineApiResponse {
-  config: {
-    dayOne: {
-      start: string;
-      end: string;
-    };
-    dayTwo: {
-      start: string;
-      end: string;
-    };
-  };
-  stages: Array<{
-    stage: string;
-    stage_name: string;
-    class: string;
-    stageColors: string;
-    stageColorsArtist: string;
-    sort: number;
-  }>;
-  events: Array<{
-    id?: string;
-    name?: string;
-    time?: string;
-    artist?: string;
-    stage?: string;
-    stage_name?: string;
-    description?: string;
-    image?: string;
-    date?: string;
-    start?: string;
-    end?: string;
-    interpret_id?: number;
-    [key: string]: unknown;
-  }>;
-}
-
-/**
- * Events API (timeline)
- */
-export const eventsApi = {
-  getAll: () => apiClient.get<TimelineApiResponse>('/timeline.php'),
-  getById: (id: string) => apiClient.get<Event>(`/timeline.php?id=${id}`),
-};
+import type { News } from '../types';
 
 /**
  * News API Response type

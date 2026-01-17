@@ -133,7 +133,7 @@ class DeepLinkService {
     // Handle simple routes
     const routeMap: Record<string, keyof RootStackParamList> = {
       'home': 'HomeMain',
-      'program': 'ProgramMain',
+      'matches': 'MatchesMain',
       'artists': 'ArtistsMain',
       'favorites': 'FavoritesMain',
       'info': 'InfoMain',

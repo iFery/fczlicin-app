@@ -9,7 +9,6 @@ import {
   Rajdhani_700Bold,
 } from '@expo-google-fonts/rajdhani';
 import { BootstrapProvider, useBootstrap } from './src/providers/BootstrapProvider';
-import { TimelineProvider } from './src/contexts/TimelineContext';
 import { ThemeProvider } from './src/theme/ThemeProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 import { OfflineBlockedScreen } from './src/screens/OfflineBlockedScreen';
@@ -18,7 +17,6 @@ import { NotificationPermissionScreen } from './src/screens/NotificationPermissi
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { useNotificationPromptStore } from './src/stores/notificationPromptStore';
 
-const MIN_LOADING_TIME = 300;
 const FADE_DURATION = 300;
 
 function LoadingScreen() {
@@ -35,7 +33,7 @@ function LoadingScreen() {
 }
 
 function AppContent() {
-  const { state, timelineData, updateInfo, skipUpdate } = useBootstrap();
+  const { state, updateInfo, skipUpdate } = useBootstrap();
   const loadingOpacity = useRef(new Animated.Value(1)).current;
   const appOpacity = useRef(new Animated.Value(0)).current;
   const updateScreenOpacity = useRef(new Animated.Value(0)).current;
@@ -45,9 +43,13 @@ function AppContent() {
   const [showUpdateScreen, setShowUpdateScreen] = useState(false);
   const [showNotificationScreen, setShowNotificationScreen] = useState(false);
   const loadingStartTime = useRef<number | null>(null);
+  const appFadeInTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Notification permission screen state
   const { shouldShowPrompt } = useNotificationPromptStore();
+
+  useEffect(() => {
+  }, []);
 
   const isLoading = state === 'loading';
   const isBlocked = state === 'offline-blocked';
@@ -111,40 +113,30 @@ function AppContent() {
     }
   }, [isLoading]);
 
-  // Handle app fade-in when ready (not showing update screen or notification screen)
-  // IMPORTANT: This should only run if notification screen is NOT going to show
-  // Notification screen has priority and will handle its own transition
+  // Show notification permission screen when app is ready (before main app)
+  // This has PRIORITY over app fade-in - check this FIRST
+  // OPTIMIZATION: Set showNotificationScreen immediately (no delay) to prevent app fade-in
   useEffect(() => {
-    // Don't start app fade-in if notification screen might show (check first)
-    const mightShowNotification = Platform.OS !== 'web' && shouldShowPrompt && shouldShowPrompt();
-    
-    if (!isLoading && isReady && !showUpdateScreen && !showNotificationScreen && !showApp && !isUpdateRequired && !isUpdateOptional && !mightShowNotification) {
-      const now = Date.now();
-      const elapsed = loadingStartTime.current ? now - loadingStartTime.current : 0;
-      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsed);
-
-      setTimeout(() => {
-        setShowApp(true);
-
-        Animated.parallel([
-          Animated.timing(loadingOpacity, {
-            toValue: 0,
-            duration: FADE_DURATION,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(appOpacity, {
-            toValue: 1,
-            duration: FADE_DURATION,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          setShowLoading(false);
-        });
-      }, remainingTime);
+    if (isReady && !showUpdateScreen && !showNotificationScreen && !showApp && Platform.OS !== 'web') {
+      // Check if we should show the prompt
+      const shouldShow = shouldShowPrompt();
+      
+      if (shouldShow) {
+        // Set showNotificationScreen immediately to prevent app fade-in from running
+        // This ensures notification screen has priority
+        setShowNotificationScreen(true);
+        
+        // Set notification screen opacity immediately (so it's visible)
+        notificationScreenOpacity.setValue(1);
+        
+        // Hide loading screen immediately (notification screen should be visible)
+        setShowLoading(false);
+        loadingOpacity.setValue(0);
+      }
+      // If shouldShow is false, don't show notification screen
+      // App fade-in will handle showing the app (in separate useEffect)
     }
-  }, [isLoading, isReady, showLoading, showApp, showUpdateScreen, showNotificationScreen, isUpdateRequired, isUpdateOptional, shouldShowPrompt, loadingOpacity, appOpacity]);
+  }, [isReady, showUpdateScreen, showNotificationScreen, showApp, shouldShowPrompt, loadingOpacity, notificationScreenOpacity]);
 
   // Handle optional update skip (when user clicks "Later")
   const handleUpdateLater = async () => {
@@ -158,18 +150,30 @@ function AppContent() {
     // For optional updates, opening store is enough - they can update or not
   };
 
-  // Show notification permission screen when app is ready (before main app)
-  // This has PRIORITY over app fade-in - check this FIRST
+  // Handle app fade-in when ready (not showing update screen or notification screen)
+  // IMPORTANT: This runs AFTER notification screen useEffect - check actual state, not prediction
   useEffect(() => {
-    if (isReady && !showUpdateScreen && !showNotificationScreen && !showApp && Platform.OS !== 'web') {
-      // Check if we should show the prompt
-      const shouldShow = shouldShowPrompt();
-      
-      if (shouldShow) {
-        // Small delay to ensure app is fully rendered
-        const timer = setTimeout(() => {
-          setShowNotificationScreen(true);
-          // Fade out loading, fade in notification screen
+    // If notification screen is shown, cancel any pending app fade-in timer
+    if (showNotificationScreen) {
+      if (appFadeInTimerRef.current) {
+        clearTimeout(appFadeInTimerRef.current);
+        appFadeInTimerRef.current = null;
+      }
+      return;
+    }
+    
+    // Only proceed if we're ready and not showing other screens
+    if (!isLoading && isReady && !showUpdateScreen && !showNotificationScreen && !showApp && !isUpdateRequired && !isUpdateOptional) {
+      // Small delay to let notification screen useEffect run first (if it was going to run)
+      // This avoids race condition where both useEffects run simultaneously
+      appFadeInTimerRef.current = setTimeout(() => {
+        appFadeInTimerRef.current = null;
+        
+        // Double-check state after delay - notification screen might have been set
+        if (!showUpdateScreen && !showNotificationScreen && !showApp && !isUpdateRequired && !isUpdateOptional) {
+          // Show app immediately when ready
+          setShowApp(true);
+
           Animated.parallel([
             Animated.timing(loadingOpacity, {
               toValue: 0,
@@ -177,7 +181,7 @@ function AppContent() {
               easing: Easing.out(Easing.ease),
               useNativeDriver: true,
             }),
-            Animated.timing(notificationScreenOpacity, {
+            Animated.timing(appOpacity, {
               toValue: 1,
               duration: FADE_DURATION,
               easing: Easing.out(Easing.ease),
@@ -186,15 +190,17 @@ function AppContent() {
           ]).start(() => {
             setShowLoading(false);
           });
-        }, 500);
-        return () => {
-          clearTimeout(timer);
-        };
-      }
-      // If shouldShow is false, don't show notification screen
-      // App fade-in will handle showing the app (in separate useEffect)
+        }
+      }, 150); // Small delay to let notification screen useEffect run first
+      
+      return () => {
+        if (appFadeInTimerRef.current) {
+          clearTimeout(appFadeInTimerRef.current);
+          appFadeInTimerRef.current = null;
+        }
+      };
     }
-  }, [isReady, showUpdateScreen, showNotificationScreen, showApp, shouldShowPrompt, loadingOpacity, notificationScreenOpacity]);
+  }, [isLoading, isReady, showLoading, showApp, showUpdateScreen, showNotificationScreen, isUpdateRequired, isUpdateOptional, loadingOpacity, appOpacity]);
 
   // Handle notification screen completion
   const handleNotificationScreenComplete = () => {
@@ -331,17 +337,19 @@ function AppContent() {
 }
 
 export default function App() {
+  useEffect(() => {
+  }, []);
+
   return (
     <SafeAreaProvider>
       <BootstrapProvider>
-        <AppContentWithTimeline />
+        <AppContentWithFonts />
       </BootstrapProvider>
     </SafeAreaProvider>
   );
 }
 
-function AppContentWithTimeline() {
-  const { timelineData } = useBootstrap();
+function AppContentWithFonts() {
   // Try to load fonts using useFonts hook (for runtime loading)
   // Fonts are also embedded via expo-font config plugin, so they should be available immediately
   const [fontsLoaded, fontError] = useFonts({
@@ -354,7 +362,7 @@ function AppContentWithTimeline() {
 
   useEffect(() => {
     if (fontError) {
-      console.error('❌ [AppContentWithTimeline] Font loading error:', fontError);
+      console.error('❌ [AppContentWithFonts] Font loading error:', fontError);
       // If there's an error, proceed anyway - fonts are embedded via config plugin
       setFontsTimeout(true);
     }
@@ -370,6 +378,14 @@ function AppContentWithTimeline() {
     return () => clearTimeout(timeout);
   }, [fontsLoaded, fontError]);
 
+  useEffect(() => {
+  }, [fontsLoaded]);
+
+  // CRITICAL: All hooks must be called before any conditional return
+  // This ensures hooks are called in the same order every render
+  useEffect(() => {
+  }, []);
+
   // Pokračuj, pokud jsou fonty načtené NEBO pokud uplynul timeout NEBO pokud je chyba
   // Fonty jsou embedované pomocí config pluginu, takže by měly být dostupné i bez runtime loading
   if (!fontsLoaded && !fontsTimeout && !fontError) {
@@ -378,9 +394,7 @@ function AppContentWithTimeline() {
   
   return (
     <ThemeProvider>
-      <TimelineProvider initialData={timelineData}>
-        <AppContent />
-      </TimelineProvider>
+      <AppContent />
     </ThemeProvider>
   );
 }

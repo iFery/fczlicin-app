@@ -7,9 +7,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError } from '../api/client';
 import { 
   loadFromCacheStaleAllowed, 
-  saveToCache, 
-  getTTLForKey 
+  saveToCache
 } from '../utils/cacheManager';
+import { getTTLForKey } from '../config/cacheConfig';
 import NetInfo from '@react-native-community/netinfo';
 
 export interface UseStaleWhileRevalidateResult<T> {

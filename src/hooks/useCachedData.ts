@@ -1,6 +1,6 @@
 /**
  * Reusable hook for data fetching with cache support
- * Reduces duplication across data hooks (useEvents, useNews, etc.)
+ * Reduces duplication across data hooks (useNews, etc.)
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -24,7 +24,7 @@ export interface UseCachedDataOptions<T> {
 
 /**
  * Generic hook for fetching data with cache support
- * Used by useEvents, useNews, etc.
+ * Used by useNews, etc.
  */
 export function useCachedData<T>({
   cacheKey,

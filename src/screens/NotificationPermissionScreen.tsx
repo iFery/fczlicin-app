@@ -3,7 +3,7 @@
  * Shown on first app launch to request notification permissions
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Animated,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationPromptStore } from '../stores/notificationPromptStore';
@@ -30,8 +31,9 @@ interface NotificationPermissionScreenProps {
 
 export function NotificationPermissionScreen({ onComplete }: NotificationPermissionScreenProps) {
   const { setPromptShown } = useNotificationPromptStore();
-  const { favoriteTeamIds, matchStartReminderEnabled, matchResultNotificationEnabled } = useNotificationPreferencesStore();
+  const { favoriteTeamIds, matchStartReminderEnabled, matchResultNotificationEnabled, setFavoriteTeamIds } = useNotificationPreferencesStore();
   const insets = useSafeAreaInsets();
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -53,7 +55,13 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
   }, [fadeAnim, slideAnim]);
 
   const handleAllowNotifications = async () => {
+    // Prevent multiple clicks
+    if (isRequestingPermission) {
+      return;
+    }
+    
     try {
+      setIsRequestingPermission(true);
       setPromptShown(true);
       
       // Request notification permission
@@ -62,9 +70,17 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
       if (permissionGranted) {
         crashlyticsService.log('notification_permission_granted');
         
-        // Register device with backend API using current preferences
+        // Auto-assign favorite team = 1 (FC Zličín) when user grants notification permission on first launch
+        // Only set if user doesn't have any favorite teams yet
+        const finalFavoriteTeamIds = favoriteTeamIds.length > 0 ? favoriteTeamIds : [1];
+        if (favoriteTeamIds.length === 0) {
+          setFavoriteTeamIds([1]);
+          crashlyticsService.log('auto_assigned_favorite_team_on_notification_grant');
+        }
+        
+        // Register device with backend API using preferences (with auto-assigned team if needed)
         await notificationService.registerDeviceTokenWithPreferences({
-          favoriteTeamIds: favoriteTeamIds.length > 0 ? favoriteTeamIds : [],
+          favoriteTeamIds: finalFavoriteTeamIds,
           matchStartReminderEnabled,
           matchResultNotificationEnabled,
         });
@@ -80,6 +96,7 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
       crashlyticsService.recordError(error instanceof Error ? error : new Error('Notification permission request failed'));
       console.error('Error requesting notification permission:', error);
       // Still proceed to app even if permission request fails
+      setIsRequestingPermission(false); // Reset on error
       onComplete();
     }
   };
@@ -123,10 +140,12 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
             />
           </View>
 
-          <Text style={styles.title}>Nezmeškej žádný zápas! 🔔</Text>
+          <Text style={styles.title}>Buď u každého zápasu 🔔</Text>
 
           <Text style={styles.description}>
-            Povol notifikace a dostávej důležité informace o zápasech FC Zličín – připomínky před začátkem zápasů, výsledky a další novinky.
+            Povol notifikace a my tě upozorníme na začátky zápasů, výsledky i důležité novinky FC Zličín.
+            {'\n\n'}
+            V nastavení si pak můžeš vybrat oblíbené týmy a upravit, co přesně chceš dostávat.
           </Text>
         </View>
 
@@ -134,15 +153,24 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
           <TouchableOpacity
             onPress={handleAllowNotifications}
             activeOpacity={0.85}
-            style={styles.primaryButton}
+            style={[styles.primaryButton, isRequestingPermission && styles.primaryButtonDisabled]}
+            disabled={isRequestingPermission}
           >
-            <Text style={styles.primaryButtonText}>Povolit notifikace</Text>
+            {isRequestingPermission ? (
+              <View style={styles.buttonLoadingContent}>
+                <ActivityIndicator size="small" color="#014fa1" style={styles.buttonLoader} />
+                <Text style={styles.primaryButtonText}>Zpracovává se...</Text>
+              </View>
+            ) : (
+              <Text style={styles.primaryButtonText}>Povolit notifikace</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleSkip}
             activeOpacity={0.6}
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, isRequestingPermission && styles.secondaryButtonDisabled]}
+            disabled={isRequestingPermission}
           >
             <Text style={styles.secondaryButtonText}>Možná později</Text>
           </TouchableOpacity>
@@ -226,6 +254,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.3,
   },
+  primaryButtonDisabled: {
+    opacity: 0.7,
+  },
+  buttonLoadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonLoader: {
+    marginRight: 8,
+  },
   secondaryButton: {
     paddingVertical: 14,
     paddingHorizontal: 32,
@@ -239,5 +278,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.semiBold,
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 15,
+  },
+  secondaryButtonDisabled: {
+    opacity: 0.5,
   },
 });

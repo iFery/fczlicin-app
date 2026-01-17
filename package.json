@@ -12,6 +12,7 @@
     "build:android": "eas build --platform android",
     "build:ios": "eas build --platform ios",
     "build:all": "eas build --platform all",
+    "build:aab": "npm run firebase:prod && APP_ENV=production npx expo prebuild --clean && cd android && ./gradlew bundleRelease",
     "firebase:dev": "node scripts/copy-firebase-config.js dev",
     "firebase:prod": "node scripts/copy-firebase-config.js prod",
     "test": "jest",

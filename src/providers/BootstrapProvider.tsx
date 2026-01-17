@@ -13,7 +13,6 @@ import { initializeFirebase, ensureFirebaseInitialized } from '../services/fireb
 import { remoteConfigService } from '../services/remoteConfig';
 import { notificationService } from '../services/notifications';
 import { Platform } from 'react-native';
-import { TimelineApiResponse } from '../api/endpoints';
 import { checkForUpdate, UpdateInfo } from '../services/updateService';
 
 const UPDATE_SKIP_KEY = '@update_skip_version';
@@ -29,7 +28,6 @@ export type BootstrapState =
 interface BootstrapContextValue {
   state: BootstrapState;
   retry: () => void;
-  timelineData: TimelineApiResponse | null;
   updateInfo: UpdateInfo | null;
   skipUpdate: () => Promise<void>;
 }
@@ -47,7 +45,6 @@ interface BootstrapProviderProps {
 export function BootstrapProvider({ children }: BootstrapProviderProps) {
   const [state, setState] = useState<BootstrapState>('loading');
   const [retryKey, setRetryKey] = useState(0);
-  const [timelineData, setTimelineData] = useState<TimelineApiResponse | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [lastInternetState, setLastInternetState] = useState<boolean | null>(null);
 
@@ -92,6 +89,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
           const cacheCleared = await checkAndClearCacheOnVersionUpgrade();
           if (cacheCleared) {
             crashlyticsService.log('cache_cleared_on_version_upgrade');
+          } else {
           }
         } catch (versionCheckError) {
           // Continue bootstrap even if version check fails
@@ -176,18 +174,6 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         const hasCache = await hasAnyValidCache(REQUIRED_CACHE_KEYS);
         if (!isMounted || abortController.signal.aborted) return;
         
-        // Preload timeline data from cache if available (for immediate use in TimelineContext)
-        if (hasCache) {
-          try {
-            const cachedTimeline = await loadFromCache<TimelineApiResponse>('timeline');
-            if (cachedTimeline && isMounted && !abortController.signal.aborted) {
-              setTimelineData(cachedTimeline);
-            }
-          } catch (err) {
-            // Silently fail - timeline will be loaded later if needed
-          }
-        }
-        
         const cacheAge = hasCache ? await getOldestCacheAge(REQUIRED_CACHE_KEYS) : null;
         
         if (cacheAge !== null) {
@@ -198,84 +184,52 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
 
         // Decision flow
         if (isInternetReachable) {
-          // Internet is available - try to fetch data
-          try {
-            crashlyticsService.log('Fetching app data...');
-            
-            // Preload general app data and current season data in parallel
-            const [preloadResult, seasonPreloadResult] = await Promise.all([
-              preloadAllData(),
-              preloadCurrentSeasonData(),
-            ]);
-            
-            if (!isMounted || abortController.signal.aborted) return;
-            
-            // Store timeline data from preload for immediate use in TimelineContext
-            if (preloadResult.timelineData && isMounted && !abortController.signal.aborted) {
-              setTimelineData(preloadResult.timelineData);
-            }
-            
-            if (preloadResult.errors.length > 0) {
-              crashlyticsService.log(`Preload errors: ${preloadResult.errors.join(', ')}`);
-            }
-            
-            if (seasonPreloadResult.errors.length > 0) {
-              crashlyticsService.log(`Season preload errors: ${seasonPreloadResult.errors.join(', ')}`);
-            } else {
-              crashlyticsService.log('current_season_data_preloaded');
-            }
-
-            // After fetch attempt, check if we have cache now
-            const hasCacheAfterFetch = REQUIRED_CACHE_KEYS.length > 0 
-              ? await hasAnyValidCache(REQUIRED_CACHE_KEYS)
-              : true; // If no required keys, consider it successful
-            
-            if (!isMounted || abortController.signal.aborted) return;
-            
-            // If no required cache keys, app can start without cache
-            if (REQUIRED_CACHE_KEYS.length === 0) {
-              crashlyticsService.log('bootstrap_online_success_no_requirements');
-              setState('ready-online');
-            } else if (hasCacheAfterFetch) {
-              crashlyticsService.log('bootstrap_online_success');
-              setState('ready-online');
-            } else if (hasCache) {
-              // Fetch failed but we had old cache
-              crashlyticsService.log('bootstrap_offline_cache_used');
-              crashlyticsService.setAttribute('fetch_failed', 'true');
-              setState('ready-offline');
-            } else {
-              // Fetch failed and no cache
-              crashlyticsService.log('bootstrap_offline_blocked');
-              crashlyticsService.setAttribute('blocked_reason', 'fetch_failed_no_cache');
-              setState('offline-blocked');
-            }
-          } catch (fetchError) {
-            if (!isMounted || abortController.signal.aborted) return;
-            
-            crashlyticsService.log('bootstrap_fetch_failed');
-            crashlyticsService.recordError(
-              fetchError instanceof Error ? fetchError : new Error('Bootstrap fetch failed')
-            );
-
-            // Check if we have cache to fall back to
-            // If no required cache keys, app can start without cache
-            if (REQUIRED_CACHE_KEYS.length === 0) {
-              crashlyticsService.log('bootstrap_ready_offline_no_requirements');
-              setState('ready-offline');
-            } else if (hasCache) {
-              crashlyticsService.log('bootstrap_offline_cache_used');
-              crashlyticsService.setAttribute('fetch_failed', 'true');
-              setState('ready-offline');
-            } else {
-              crashlyticsService.log('bootstrap_offline_blocked');
-              crashlyticsService.setAttribute('blocked_reason', 'fetch_error_no_cache');
-              setState('offline-blocked');
-            }
-          }
-        } else {
+          // Internet is available - bootstrap immediately, preload in background
+          // OPTIMIZATION: Don't block bootstrap waiting for data preload
+          // App shows immediately, data loads in background
+          
+          // Set ready state immediately (don't wait for preload)
+          // Since REQUIRED_CACHE_KEYS is empty, app can start without cache
+          crashlyticsService.log('bootstrap_online_success_no_requirements');
+          setState('ready-online');
+          
+          // Start data preload in background (non-blocking)
+          // This doesn't block bootstrap or app visibility
+          
+          Promise.all([
+            preloadAllData(),
+            preloadCurrentSeasonData(),
+          ])
+            .then(([preloadResult, seasonPreloadResult]) => {
+              // Preload completed
+              if (!isMounted || abortController.signal.aborted) return;
+              
+              
+              if (preloadResult.errors.length > 0) {
+                crashlyticsService.log(`Preload errors: ${preloadResult.errors.join(', ')}`);
+              }
+              
+              if (seasonPreloadResult.errors.length > 0) {
+                crashlyticsService.log(`Season preload errors: ${seasonPreloadResult.errors.join(', ')}`);
+              } else {
+                crashlyticsService.log('current_season_data_preloaded');
+              }
+            })
+            .catch((preloadError) => {
+              // Preload failed - log but don't block app (non-critical)
+              if (!isMounted || abortController.signal.aborted) return;
+              
+              console.warn('Background preload failed (non-blocking):', preloadError);
+              crashlyticsService.log('bootstrap_background_preload_failed');
+              crashlyticsService.recordError(
+                preloadError instanceof Error ? preloadError : new Error('Background preload failed')
+              );
+              // App continues to work - this is non-blocking
+            });
+          } else {
           // Internet is NOT available
           if (!isMounted || abortController.signal.aborted) return;
+          
           
           // If no required cache keys, app can start without cache (football app doesn't require pre-cached data)
           if (REQUIRED_CACHE_KEYS.length === 0) {
@@ -344,7 +298,6 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         setLastInternetState(isInternetReachable);
         
         // Set state directly to ready without restarting bootstrap
-        // We already have timelineData from previous bootstrap run
         const readyState = isInternetReachable ? 'ready-online' : 'ready-offline';
         setState(readyState);
         crashlyticsService.log(`update_skipped_quick_transition_to_${readyState}`);
@@ -393,7 +346,6 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   const value: BootstrapContextValue = {
     state,
     retry,
-    timelineData,
     updateInfo,
     skipUpdate,
   };

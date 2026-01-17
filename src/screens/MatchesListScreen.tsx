@@ -249,7 +249,7 @@ const MatchesListScreen: React.FC = () => {
       return (
         <TouchableOpacity
           key={match.id}
-          onPress={() => canOpenDetail ? (navigation as any).navigate('MatchDetail', { matchId: match.id.toString() }) : null}
+          onPress={() => canOpenDetail ? (navigation as any).navigate('MatchDetail', { matchId: match.id.toString(), teamName: getTeamName() }) : null}
           activeOpacity={1}
           disabled={activeTab === 'calendar' || !hasDetail}
         >

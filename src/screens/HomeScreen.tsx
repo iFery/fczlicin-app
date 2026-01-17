@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -40,6 +40,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [activeSlide, setActiveSlide] = useState(0);
   const { globalStyles } = useTheme();
+  const hasLoggedMount = useRef(false);
   
   // Football data hooks
   const { data: teams } = useTeams();
@@ -60,6 +61,25 @@ export default function HomeScreen() {
   const { data: upcomingMatches, loading: matchesLoading, error: matchesError, refetch: refetchMatches } = useMatchCalendar(defaultTeam, defaultSeason);
   const { data: recentMatches, refetch: refetchResults } = useMatchResults(defaultTeam, defaultSeason);
   const { data: standings } = useStandings(defaultTeam, defaultSeason);
+
+  // Track first render (mount) of HomeScreen
+  useEffect(() => {
+    if (!hasLoggedMount.current) {
+      hasLoggedMount.current = true;
+    }
+  }, []);
+
+  // Track when meaningful content is rendered (when we have data)
+  useEffect(() => {
+    // Check if we have meaningful data to display
+    const hasMeaningfulContent = displayNews.length > 0 || upcomingMatches || recentMatches || standings;
+    if (hasMeaningfulContent && hasLoggedMount.current) {
+      // Use setTimeout to ensure this runs after render
+      const timer = setTimeout(() => {
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [displayNews, upcomingMatches, recentMatches, standings]);
   
   // Find FC Zličín position in standings
   const ourPosition = standings?.findIndex(team => 
@@ -581,7 +601,6 @@ const styles = StyleSheet.create({
   },
   roundBadgeText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
   },
   loadingIndicator: {
     marginVertical: 20,
@@ -697,7 +716,6 @@ const styles = StyleSheet.create({
   },
   homeBadgeText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
     marginLeft: 4,
   },
   // Quick Actions

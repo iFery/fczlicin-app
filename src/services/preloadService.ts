@@ -2,10 +2,8 @@
  * Preload service - loads all critical data into cache on app startup
  */
 
-import { eventsApi, newsApi, type TimelineApiResponse } from '../api';
 import { saveToCache, hasValidCache, getCacheAge } from '../utils/cacheManager';
 import { crashlyticsService } from './crashlytics';
-import type { Event, News } from '../types';
 import { 
   footballApi, 
   getCurrentSeason,
@@ -27,12 +25,11 @@ export type PreloadProgressCallback = (progress: PreloadProgress) => void;
 
 /**
  * Preload all critical data into cache
- * Returns timeline data if available for immediate use in TimelineContext
  * Note: Festival-related preloading removed - app now uses football API
  */
 export async function preloadAllData(
   onProgress?: PreloadProgressCallback
-): Promise<{ success: boolean; errors: string[]; timelineData?: TimelineApiResponse }> {
+): Promise<{ success: boolean; errors: string[] }> {
   const errors: string[] = [];
   // Festival-related tasks removed - app now uses football API with different caching strategy
   const tasks: Array<{ name: string; key: string; fn: () => Promise<any> }> = [];
@@ -49,7 +46,6 @@ export async function preloadAllData(
     return {
       success: true,
       errors: [],
-      timelineData: undefined,
     };
   }
   
@@ -72,9 +68,6 @@ export async function preloadAllData(
   const startTime = Date.now();
 
   // Execute all preload tasks in parallel
-  // Special handling for Events task to capture timeline data
-  let timelineData: TimelineApiResponse | null = null;
-  
   const taskPromises = tasks.map(async (task) => {
     try {
       // Report that we're starting this task
@@ -85,11 +78,6 @@ export async function preloadAllData(
       });
 
       const result = await task.fn();
-      
-      // Capture timeline data from Events task
-      if (task.name === 'Events' && result) {
-        timelineData = result as TimelineApiResponse;
-      }
 
       // Task completed successfully - use atomic increment
       const currentCompleted = incrementCompleted();
@@ -137,15 +125,6 @@ export async function preloadAllData(
     }
   });
 
-  // Extract timeline data from Events task result if not already captured
-  if (!timelineData) {
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled' && tasks[index].name === 'Events' && result.value.data) {
-        timelineData = result.value.data as TimelineApiResponse | null;
-      }
-    });
-  }
-
   onProgress?.({
     total,
     completed,
@@ -155,80 +134,7 @@ export async function preloadAllData(
   return {
     success: errors.length === 0,
     errors,
-    timelineData: timelineData || undefined,
   };
-}
-
-/**
- * Transform timeline API response to events format
- */
-function transformTimeline(response: TimelineApiResponse): { events: Event[]; timeline: TimelineApiResponse } {
-  // Transform events from timeline API response
-  const events: Event[] = response.events.map((event) => ({
-    id: event.id || '',
-    name: event.name || '',
-    time: event.time || '',
-    artist: event.artist || '',
-    stage: event.stage,
-    description: event.description,
-    image: event.image,
-    date: event.date,
-  }));
-
-  return { events, timeline: response };
-}
-
-/**
- * Preload events (timeline)
- * Returns timeline data for immediate use in TimelineContext
- */
-async function preloadEvents(): Promise<TimelineApiResponse | null> {
-  try {
-    // Check if cache is valid
-    const cacheValid = await hasValidCache('events');
-    if (cacheValid) {
-      // Return cached timeline data if available
-      const { loadFromCache } = await import('../utils/cacheManager');
-      return await loadFromCache<TimelineApiResponse>('timeline') || null;
-    }
-
-    const response = await eventsApi.getAll();
-    const transformed = transformTimeline(response.data);
-    
-    // Save events array for backward compatibility
-    await saveToCache<Event[]>('events', transformed.events);
-    // Also save full timeline data with config and stages
-    await saveToCache<TimelineApiResponse>('timeline', transformed.timeline);
-    
-    // Return timeline data for immediate use
-    return transformed.timeline;
-  } catch (error) {
-    // Try to return cached timeline data even if API call failed
-    try {
-      const { loadFromCache } = await import('../utils/cacheManager');
-      return await loadFromCache<TimelineApiResponse>('timeline') || null;
-    } catch {
-      throw error;
-    }
-  }
-}
-
-/**
- * Preload news
- */
-async function preloadNews(): Promise<void> {
-  try {
-    // Check if cache is valid
-    const cacheValid = await hasValidCache('news');
-    if (cacheValid) {
-      return;
-    }
-
-    const response = await newsApi.getAll();
-    await saveToCache<News[]>('news', response.data);
-  } catch (error) {
-    throw error;
-  }
 }
 
 /**

@@ -49,13 +49,6 @@ export const linking = {
               matchId: (matchId: string) => matchId,
             },
           },
-          ArtistDetail: {
-            path: 'artist/:artistId',
-            parse: {
-              artistId: (artistId: string) => artistId,
-              artistName: (artistName: string) => decodeURIComponent(artistName || ''),
-            },
-          },
           NewsDetail: {
             path: 'news/:newsId',
             parse: {
@@ -70,13 +63,6 @@ export const linking = {
       Artists: {
         screens: {
           ArtistsMain: 'artists',
-          ArtistDetail: {
-            path: 'artist/:artistId',
-            parse: {
-              artistId: (artistId: string) => artistId,
-              artistName: (artistName: string) => decodeURIComponent(artistName || ''),
-            },
-          },
           NewsDetail: {
             path: 'news/:newsId',
             parse: {
@@ -91,13 +77,6 @@ export const linking = {
       Favorites: {
         screens: {
           FavoritesMain: 'favorites',
-          ArtistDetail: {
-            path: 'artist/:artistId',
-            parse: {
-              artistId: (artistId: string) => artistId,
-              artistName: (artistName: string) => decodeURIComponent(artistName || ''),
-            },
-          },
           NewsDetail: {
             path: 'news/:newsId',
             parse: {
@@ -112,13 +91,6 @@ export const linking = {
       Info: {
         screens: {
           InfoMain: 'info',
-          ArtistDetail: {
-            path: 'artist/:artistId',
-            parse: {
-              artistId: (artistId: string) => artistId,
-              artistName: (artistName: string) => decodeURIComponent(artistName || ''),
-            },
-          },
           NewsDetail: {
             path: 'news/:newsId',
             parse: {
@@ -146,16 +118,6 @@ export function parseNotificationToNavParams(
     };
   }
   
-  // Check for artist/event notification
-  if (data.artistId) {
-    // Artist detail navigation would go here if needed
-    // For now, default to home
-  }
-  
-  if (data.eventId) {
-    // Event detail navigation would go here if needed
-    // For now, default to home
-  }
   
   // Default to home for all other notifications
   return {

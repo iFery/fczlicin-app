@@ -4,8 +4,12 @@
  */
 
 module.exports = ({ config }) => {
-  // Get environment from EAS build profile or default to 'development'
-  const environment = process.env.EAS_BUILD_PROFILE || process.env.NODE_ENV || 'development';
+  // Get environment with priority:
+  // 1. APP_ENV (explicit control for local builds)
+  // 2. EAS_BUILD_PROFILE (EAS cloud builds)
+  // 3. NODE_ENV (fallback)
+  // 4. 'development' (default)
+  const environment = process.env.APP_ENV || process.env.EAS_BUILD_PROFILE || process.env.NODE_ENV || 'development';
   const isProduction = environment === 'production';
   const isDevelopment = environment === 'development';
 

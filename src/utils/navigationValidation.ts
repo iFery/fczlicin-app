@@ -35,7 +35,7 @@ export function validateNavigationParams(
       return { valid: true };
 
     case 'HomeMain':
-    case 'ProgramMain':
+    case 'MatchesMain':
     case 'ArtistsMain':
     case 'FavoritesMain':
     case 'InfoMain':

@@ -1,15 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useMatchDetail, useMatchPlayerStats, useRoundResults } from '../hooks/useFootballData';
+import { useMatchDetail, useMatchPlayerStats, useRoundResults, useTeams } from '../hooks/useFootballData';
 import { LoadingSpinner, ErrorView, TabView, MatchCard, MatchDetails, MatchPlayerStats, RoundResults } from '../components/index';
 import { useTheme } from '../theme/ThemeProvider';
 
 const MatchDetailScreen: React.FC = ({ route }: any) => {
-  const { matchId } = route.params;
+  const { matchId, teamName } = route.params || {};
   const { data: match, loading: matchLoading, error: matchError } = useMatchDetail(parseInt(matchId));
   const { data: playerStats, loading: statsLoading, error: statsError } = useMatchPlayerStats(parseInt(matchId));
   const { data: roundResults, loading: roundLoading, error: roundError } = useRoundResults(parseInt(matchId));
+  const { data: teams } = useTeams();
   const { globalStyles } = useTheme();
+
+  // Try to get team name from route params, or from teams list based on match competition
+  const getDisplayTeamName = (): string | undefined => {
+    if (teamName) return teamName;
+    
+    // Try to find team from competition field or other match data
+    // For now, return undefined and let MatchCard use fallback (day of week)
+    return undefined;
+  };
 
   if (matchLoading || statsLoading || roundLoading) {
     return <LoadingSpinner />;
@@ -48,7 +58,7 @@ const MatchDetailScreen: React.FC = ({ route }: any) => {
 
   return (
     <View style={styles.container}>
-      <MatchCard match={match} />
+      <MatchCard match={match} teamName={getDisplayTeamName()} />
       <TabView tabs={tabs} />
     </View>
   );

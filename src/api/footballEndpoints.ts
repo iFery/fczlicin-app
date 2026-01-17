@@ -225,6 +225,7 @@ export interface NotificationPreferences {
   favoriteTeamIds: number[];
   matchStartReminderEnabled: boolean;
   matchResultNotificationEnabled: boolean;
+  environment?: string; // Environment identifier (development, staging, production)
 }
 
 export interface NotificationPreferencesResponse {
