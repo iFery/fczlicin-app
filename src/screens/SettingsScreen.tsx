@@ -18,6 +18,7 @@ import { useNotificationPreferencesStore } from '../stores/notificationPreferenc
 import { useTheme } from '../theme/ThemeProvider';
 import { useTeams } from '../hooks/useFootballData';
 import { notificationService } from '../services/notifications';
+import { analyticsService } from '../services/analytics';
 
 export default function SettingsScreen() {
   const {
@@ -61,12 +62,25 @@ export default function SettingsScreen() {
 
   const handleOpenSystemSettings = async () => {
     try {
+      // Log Analytics event - user clicked on settings button
+      analyticsService.logEvent('permission_settings_clicked', {
+        permission_type: 'notifications',
+        source: 'settings_screen',
+      });
+      
       // Nejprve zkus požádat o oprávnění (funguje hlavně na Androidu)
       const { status } = await Notifications.requestPermissionsAsync();
       
       if (status === 'granted') {
         // Oprávnění bylo uděleno
         setNotificationPermissionStatus('granted');
+        
+        // Log Analytics event - permission granted from settings
+        analyticsService.logEvent('permission_granted', {
+          permission_type: 'notifications',
+          source: 'settings_screen',
+        });
+        
         return;
       }
       
@@ -93,12 +107,33 @@ export default function SettingsScreen() {
       // Check OS permission first
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== 'granted') {
+        // Log Analytics event - user clicked on permission request from toggle
+        analyticsService.logEvent('permission_request_clicked', {
+          source: 'settings_screen',
+          trigger: 'toggle_switch',
+        });
+        
         const { status: newStatus } = await Notifications.requestPermissionsAsync();
         if (newStatus !== 'granted') {
           // Permission denied - don't enable
+          
+          // Log Analytics event - permission denied
+          analyticsService.logEvent('permission_denied', {
+            permission_type: 'notifications',
+            source: 'settings_screen',
+            trigger: 'toggle_switch',
+          });
+          
           return;
         }
         setNotificationPermissionStatus('granted');
+        
+        // Log Analytics event - permission granted
+        analyticsService.logEvent('permission_granted', {
+          permission_type: 'notifications',
+          source: 'settings_screen',
+          trigger: 'toggle_switch',
+        });
       }
     }
     

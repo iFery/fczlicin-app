@@ -16,37 +16,57 @@ config/firebase/
 
 ## 🚀 Použití
 
-### Automatické kopírování (doporučeno)
+### ✅ Automatické kopírování (NOVÉ - výchozí chování)
 
-Build script automaticky zkopíruje správné soubory před buildem:
+**Firebase config se nyní automaticky kopíruje při každém spuštění `app.config.js`!**
+
+To znamená, že už **NEMUSÍTE** manuálně spouštět `firebase:dev` před buildem:
 
 ```bash
-# Development build
-npm run firebase:dev
-npm run android  # nebo npm run ios
+# Development build - automaticky použije DEV config
+npx expo run:android
+npx expo run:ios
+npm run android  # také funguje
+npm run ios      # také funguje
 
-# Production build
-npm run firebase:prod
-eas build --profile production
+# Production build - automaticky použije PROD config
+APP_ENV=production npx expo run:android
+NODE_ENV=production npx expo run:android
 ```
 
-### Manuální kopírování
+**Jak to funguje:**
+- `app.config.js` automaticky detekuje prostředí z `APP_ENV`, `EAS_BUILD_PROFILE` nebo `NODE_ENV`
+- Správný config se zkopíruje z `config/firebase/{env}/` do kořenového adresáře
+- Expo plugin pak zkopíruje soubory do správných native složek během prebuildu
+
+### Manuální kopírování (volitelné)
+
+Pokud potřebujete manuálně zkopírovat config (např. pro testování):
 
 ```bash
 # Development
+npm run firebase:dev
+# nebo
 node scripts/copy-firebase-config.js dev
 
 # Production
+npm run firebase:prod
+# nebo
 node scripts/copy-firebase-config.js prod
 ```
 
-## 📋 Co script dělá
+## 📋 Co se děje automaticky
 
-1. Zkopíruje soubory z `config/firebase/{env}/` do standardních umístění:
-   - `android/app/google-services.json`
-   - `ios/FMCityFest/GoogleService-Info.plist`
+1. **Při načtení `app.config.js`** (před každým prebuildem):
+   - Detekuje prostředí z environment variables
+   - Zkopíruje soubory z `config/firebase/{env}/` do kořenového adresáře:
+     - `google-services.json` (Android)
+     - `GoogleService-Info.plist` (iOS)
 
-2. Native buildy pak používají standardní umístění (jak očekávají)
+2. **Během prebuildu** (Expo plugin):
+   - Expo Firebase plugin zkopíruje soubory z kořenového adresáře do:
+     - `android/app/google-services.json`
+     - `ios/{project}/GoogleService-Info.plist`
 
 ## 🔐 Bezpečnost
 

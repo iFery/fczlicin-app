@@ -3,6 +3,9 @@
  * This file replaces app.json to enable dynamic configuration
  */
 
+const fs = require('fs');
+const path = require('path');
+
 module.exports = ({ config }) => {
   // Get environment with priority:
   // 1. APP_ENV (explicit control for local builds)
@@ -19,6 +22,76 @@ module.exports = ({ config }) => {
   
   const isProduction = environment === 'production';
   const isDevelopment = environment === 'development';
+  
+  // Automatically copy correct Firebase config files to root directory
+  // This ensures correct config is used even when running `npx expo run:android` directly
+  // CRITICAL: This runs BEFORE plugins, so Firebase plugin will use the correct config
+  const envFolder = isProduction ? 'prod' : 'dev';
+  const rootDir = path.resolve(__dirname);
+  const configDir = path.join(rootDir, 'config', 'firebase', envFolder);
+  const androidTarget = path.join(rootDir, 'google-services.json');
+  const iosTarget = path.join(rootDir, 'GoogleService-Info.plist');
+  const androidSource = path.join(configDir, 'google-services.json');
+  const iosSource = path.join(configDir, 'GoogleService-Info.plist');
+  
+  // Copy Android config - ALWAYS copy to ensure correct config is used
+  if (fs.existsSync(androidSource)) {
+    // Check if target exists and has different project_id (to avoid unnecessary copies)
+    let shouldCopy = true;
+    if (fs.existsSync(androidTarget)) {
+      try {
+        const targetContent = JSON.parse(fs.readFileSync(androidTarget, 'utf8'));
+        const sourceContent = JSON.parse(fs.readFileSync(androidSource, 'utf8'));
+        if (targetContent.project_info?.project_id === sourceContent.project_info?.project_id) {
+          shouldCopy = false; // Already correct
+        }
+      } catch (e) {
+        // If parsing fails, copy anyway
+        shouldCopy = true;
+      }
+    }
+    
+    if (shouldCopy) {
+      fs.copyFileSync(androidSource, androidTarget);
+      console.log(`✅ [app.config.js] Copied ${envFolder} Firebase config: google-services.json`);
+    }
+    
+    // CRITICAL: Also copy to android/app/ if it exists (for when android/ folder already exists)
+    // This ensures correct config is used even when prebuild doesn't run
+    const androidAppDir = path.join(rootDir, 'android', 'app');
+    const androidAppTarget = path.join(androidAppDir, 'google-services.json');
+    if (fs.existsSync(androidAppDir)) {
+      fs.copyFileSync(androidSource, androidAppTarget);
+      console.log(`✅ [app.config.js] Copied ${envFolder} Firebase config to android/app/: google-services.json`);
+    }
+  }
+  
+  // Copy iOS config - ALWAYS copy to ensure correct config is used
+  if (fs.existsSync(iosSource)) {
+    fs.copyFileSync(iosSource, iosTarget);
+    console.log(`✅ [app.config.js] Copied ${envFolder} Firebase config: GoogleService-Info.plist`);
+    
+    // CRITICAL: Also copy to iOS project if it exists (for when ios/ folder already exists)
+    // This ensures correct config is used even when prebuild doesn't run
+    const iosDir = path.join(rootDir, 'ios');
+    if (fs.existsSync(iosDir)) {
+      // Try common iOS project locations - copy to ALL found locations
+      const possibleIOSTargets = [
+        path.join(iosDir, 'FCZlin', 'GoogleService-Info.plist'),
+        path.join(iosDir, 'FCZlicin', 'GoogleService-Info.plist'),
+        path.join(iosDir, 'GoogleService-Info.plist'),
+      ];
+      
+      // Copy to all found iOS project locations (not just first)
+      for (const iosAppTarget of possibleIOSTargets) {
+        const iosAppDir = path.dirname(iosAppTarget);
+        if (fs.existsSync(iosAppDir)) {
+          fs.copyFileSync(iosSource, iosAppTarget);
+          console.log(`✅ [app.config.js] Copied ${envFolder} Firebase config to iOS: ${path.relative(rootDir, iosAppTarget)}`);
+        }
+      }
+    }
+  }
 
   // API URL - can be overridden by EAS Secrets
   const apiUrl = process.env.API_URL || 'https://www.fczlicin.cz';
@@ -60,7 +133,7 @@ module.exports = ({ config }) => {
         },
         package: 'cz.fczlicin.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 9, // Increment this for each release to Google Play
+        versionCode: 11, // Increment this for each release to Google Play
       },
       web: {
         favicon: './assets/favicon.png',

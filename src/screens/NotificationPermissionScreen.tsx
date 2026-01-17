@@ -21,6 +21,7 @@ import { useNotificationPromptStore } from '../stores/notificationPromptStore';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import { notificationService } from '../services/notifications';
 import { crashlyticsService } from '../services/crashlytics';
+import { analyticsService } from '../services/analytics';
 import { typography } from '../theme/ThemeProvider';
 
 const { width, height } = Dimensions.get('window');
@@ -64,11 +65,22 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
       setIsRequestingPermission(true);
       setPromptShown(true);
       
+      // Log Analytics event - user clicked on permission request button
+      analyticsService.logEvent('permission_request_clicked', {
+        source: 'notification_permission_screen',
+      });
+      
       // Request notification permission
       const permissionGranted = await notificationService.requestPermissions();
       
       if (permissionGranted) {
         crashlyticsService.log('notification_permission_granted');
+        
+        // Log Analytics event - permission granted
+        analyticsService.logEvent('permission_granted', {
+          permission_type: 'notifications',
+          source: 'notification_permission_screen',
+        });
         
         // Auto-assign favorite team = 1 (FC Zličín) when user grants notification permission on first launch
         // Only set if user doesn't have any favorite teams yet
@@ -88,6 +100,12 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
         crashlyticsService.log('device_registered_with_notification_api');
       } else {
         crashlyticsService.log('notification_permission_denied');
+        
+        // Log Analytics event - permission denied
+        analyticsService.logEvent('permission_denied', {
+          permission_type: 'notifications',
+          source: 'notification_permission_screen',
+        });
       }
       
       // Complete and proceed to app
@@ -104,6 +122,13 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
   const handleSkip = () => {
     setPromptShown(true);
     crashlyticsService.log('notification_permission_modal_dismissed');
+    
+    // Log Analytics event - user skipped permission request
+    analyticsService.logEvent('permission_skipped', {
+      permission_type: 'notifications',
+      source: 'notification_permission_screen',
+    });
+    
     onComplete();
   };
 

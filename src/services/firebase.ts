@@ -1,4 +1,5 @@
 import firebase from '@react-native-firebase/app';
+import analytics from '@react-native-firebase/analytics';
 import messaging from '@react-native-firebase/messaging';
 import remoteConfig from '@react-native-firebase/remote-config';
 import crashlytics from '@react-native-firebase/crashlytics';
@@ -177,6 +178,15 @@ export const initializeFirebase = async (): Promise<void> => {
       console.warn('⚠️ Crashlytics setup failed:', crashlyticsError);
       // Crashlytics není kritický, pokračujeme
     }
+
+    // Inicializace Analytics
+    try {
+      // Analytics se inicializuje automaticky, ale můžeme zkontrolovat, že funguje
+      analytics().setAnalyticsCollectionEnabled(true);
+    } catch (analyticsError) {
+      console.warn('⚠️ Analytics setup failed:', analyticsError);
+      // Analytics není kritický, pokračujeme
+    }
   } catch (error) {
     console.error('❌ Error initializing Firebase:', error);
     // Nehážeme error, aby aplikace mohla pokračovat
@@ -214,6 +224,17 @@ export const isFirebaseReady = (): boolean => {
     }
     return false;
   }
+};
+
+/**
+ * Získá Firebase Analytics instance (s kontrolou inicializace)
+ */
+export const getFirebaseAnalytics = async () => {
+  await ensureFirebaseInitialized();
+  if (!isFirebaseReady()) {
+    throw new Error('Firebase not ready after initialization');
+  }
+  return analytics();
 };
 
 /**

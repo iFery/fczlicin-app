@@ -28,6 +28,8 @@ import { remoteConfigService } from '../services/remoteConfig';
 import { crashlyticsService } from '../services/crashlytics';
 import { CACHE_KEY_PATTERNS } from '../config/cacheConfig';
 import { useTeams } from '../hooks/useFootballData';
+import { isFirebaseReady, ensureFirebaseInitialized } from '../services/firebase';
+import firebase from '@react-native-firebase/app';
 
 interface CacheInfo {
   key: string;
@@ -59,6 +61,7 @@ export default function DebugScreen() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [scheduledNotifications, setScheduledNotifications] = useState<Notifications.NotificationRequest[]>([]);
   const [remoteConfigValues, setRemoteConfigValues] = useState<Record<string, string>>({});
+  const [firebaseProjectId, setFirebaseProjectId] = useState<string>('Načítání...');
 
   useEffect(() => {
     loadDebugInfo();
@@ -77,6 +80,7 @@ export default function DebugScreen() {
       loadNotificationInfo(),
       loadScheduledNotifications(),
       loadRemoteConfig(),
+      loadFirebaseProjectId(),
     ]);
   };
 
@@ -179,6 +183,22 @@ export default function DebugScreen() {
     }
   };
 
+  const loadFirebaseProjectId = async () => {
+    try {
+      await ensureFirebaseInitialized();
+      if (isFirebaseReady()) {
+        const app = firebase.app();
+        const projectId = app.options?.projectId || app.options?.appId || 'N/A';
+        setFirebaseProjectId(projectId);
+      } else {
+        setFirebaseProjectId('Není k dispozici (Firebase není inicializován)');
+      }
+    } catch (error) {
+      console.error('Error loading Firebase Project ID:', error);
+      setFirebaseProjectId('Chyba při načítání');
+    }
+  };
+
   const formatAge = (ageMs: number | null): string => {
     if (ageMs === null) return 'Není v cache';
     const seconds = Math.floor(ageMs / 1000);
@@ -277,6 +297,11 @@ export default function DebugScreen() {
               </Text>
             </View>
             <View style={styles.infoCard}>
+              <InfoRow 
+                label="Firebase Project ID" 
+                value={firebaseProjectId}
+                valueColor={firebaseProjectId !== 'Načítání...' && !firebaseProjectId.includes('Není') && !firebaseProjectId.includes('Chyba') ? '#014fa1' : '#666666'}
+              />
               <InfoRow label="Verze aplikace" value={appVersion} />
               <InfoRow label="Build číslo" value={String(buildNumber)} />
               <InfoRow label="Platforma" value={`${platform} ${platformVersion}`} />

@@ -6,6 +6,7 @@ import { handleNotificationNavigation } from './notificationNavigation';
 import { notificationApi } from '../api/footballEndpoints';
 import { ensureFirebaseInitialized, isFirebaseReady, safeMessagingCall } from './firebase';
 import { crashlyticsService } from './crashlytics';
+import { analyticsService } from './analytics';
 
 /**
  * Get current environment from app config
@@ -30,12 +31,44 @@ Notifications.setNotificationHandler({
 
 class NotificationService {
   private fcmToken: string | null = null;
+  private notificationChannelCreated: boolean = false;
+
+  /**
+   * Vytvoří notification channel pro Android
+   * Toto je kritické pro správné fungování notifikací na Androidu
+   * a může pomoci předejít crashům v NotificationForwarderActivity
+   */
+  async ensureNotificationChannel(): Promise<void> {
+    if (Platform.OS !== 'android' || this.notificationChannelCreated) {
+      return;
+    }
+
+    try {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'FC Zličín Notifikace',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#014fa1',
+        description: 'Notifikace z aplikace FC Zličín',
+      });
+      this.notificationChannelCreated = true;
+      console.log('Notification channel created successfully');
+    } catch (error) {
+      console.error('Error creating notification channel:', error);
+      crashlyticsService.recordError(error as Error);
+      // Continue - channel might already exist
+    }
+  }
 
   /**
    * Požádá o oprávnění k notifikacím
    */
   async requestPermissions(): Promise<boolean> {
     try {
+      // Vytvoř notification channel pro Android před požádáním o oprávnění
+      await this.ensureNotificationChannel();
+
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
@@ -46,8 +79,23 @@ class NotificationService {
 
       if (finalStatus !== 'granted') {
         console.warn('Notification permissions not granted');
+        
+        // Log Analytics event - permission denied (if not already logged by caller)
+        // This is a fallback for cases where requestPermissions is called directly
+        analyticsService.logEvent('permission_denied', {
+          permission_type: 'notifications',
+          source: 'notifications_service',
+        });
+        
         return false;
       }
+
+      // Log Analytics event - permission granted (if not already logged by caller)
+      // This is a fallback for cases where requestPermissions is called directly
+      analyticsService.logEvent('permission_granted', {
+        permission_type: 'notifications',
+        source: 'notifications_service',
+      });
 
       return true;
     } catch (error) {
@@ -111,6 +159,9 @@ class NotificationService {
    */
   async setupNotificationListeners() {
     try {
+      // Zajisti, že notification channel existuje (pro Android)
+      await this.ensureNotificationChannel();
+
       // Zajisti, že Firebase je inicializován
       await ensureFirebaseInitialized();
       
@@ -142,12 +193,17 @@ class NotificationService {
         return msg.onMessage(async (remoteMessage) => {
           console.log('Foreground notification received:', remoteMessage);
           
+          // Zajisti, že notification channel existuje
+          await this.ensureNotificationChannel();
+
           // Zobrazí lokální notifikaci
+          // DŮLEŽITÉ: Vždy zahrň data pole, i když je prázdné, aby se předešlo crashům
           await Notifications.scheduleNotificationAsync({
             content: {
               title: remoteMessage.notification?.title || 'Nová notifikace',
               body: remoteMessage.notification?.body || '',
-              data: remoteMessage.data,
+              // Vždy zahrň data - i prázdné pole je lepší než null
+              data: remoteMessage.data || {},
             },
             trigger: null, // Okamžitě
           });
@@ -164,13 +220,31 @@ class NotificationService {
     // Listener pro kliknutí na notifikaci
     // Works for both foreground and background/closed app states
     const notificationListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification tapped:', response);
-      const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-      
-      if (data) {
-        // Use navigation helper with queue system
-        // No delay needed - queue handles timing
-        handleNotificationNavigation(data);
+      try {
+        console.log('Notification tapped:', response);
+        
+        // Obranná kontrola - zkontroluj, že response a notification existují
+        if (!response || !response.notification || !response.notification.request) {
+          console.warn('Invalid notification response - missing notification or request');
+          crashlyticsService.recordError(
+            new Error('Invalid notification response structure'),
+            'NotificationResponseInvalid'
+          );
+          return;
+        }
+
+        const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+        
+        if (data) {
+          // Use navigation helper with queue system
+          // No delay needed - queue handles timing
+          handleNotificationNavigation(data);
+        } else {
+          console.warn('Notification tapped but no data field found');
+        }
+      } catch (error) {
+        console.error('Error handling notification response:', error);
+        crashlyticsService.recordError(error as Error);
       }
     });
 
@@ -181,12 +255,25 @@ class NotificationService {
       const lastNotificationResponse = await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
         console.log('App opened by notification tap:', lastNotificationResponse);
+        
+        // Obranná kontrola - zkontroluj, že notification a request existují
+        if (!lastNotificationResponse.notification || !lastNotificationResponse.notification.request) {
+          console.warn('Invalid last notification response - missing notification or request');
+          crashlyticsService.recordError(
+            new Error('Invalid last notification response structure'),
+            'LastNotificationResponseInvalid'
+          );
+          return;
+        }
+
         const data = lastNotificationResponse.notification.request.content.data as Record<string, unknown> | undefined;
         
         if (data) {
           // Use navigation helper with queue system
           // Queue will handle navigation when navigation is ready
           handleNotificationNavigation(data);
+        } else {
+          console.warn('App opened by notification but no data field found');
         }
       }
     } catch (error) {
@@ -206,10 +293,14 @@ class NotificationService {
    */
   async sendTestNotification(): Promise<void> {
     try {
+      // Zajisti, že notification channel existuje
+      await this.ensureNotificationChannel();
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Testovací notifikace',
           body: 'Toto je testovací notifikace z aplikace FC Zličín',
+          // Vždy zahrň data pole
           data: { test: true },
         },
         trigger: null, // Okamžitě
@@ -227,10 +318,14 @@ class NotificationService {
    */
   async scheduleTestNotification(seconds: number = 10): Promise<void> {
     try {
+      // Zajisti, že notification channel existuje
+      await this.ensureNotificationChannel();
+
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Testovací notifikace (naplánovaná)',
           body: `Tato notifikace byla naplánována před ${seconds} sekundami. Aplikace může být zavřená.`,
+          // Vždy zahrň data pole
           data: { 
             test: true,
             scheduled: true,
