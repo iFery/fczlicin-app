@@ -59,6 +59,13 @@ config/firebase/dev/
 # Firebase config helper files (if any)
 # config/firebase-config.*.js
 
+# Auto-generated Firebase configs in root and native folders
+# These are automatically copied from config/firebase/{env}/ by app.config.js
+google-services.json
+GoogleService-Info.plist
+android/app/google-services.json
+ios/GoogleService-Info.plist
+
 # Backend API - contains server-side code, should not be in mobile app repo
 be-api/
 
