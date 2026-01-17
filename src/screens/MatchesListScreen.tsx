@@ -91,46 +91,11 @@ const MatchesListScreen: React.FC = () => {
   // AND competition is null (which means it's still defaultData)
   const isCompetitionStillLoading = competitionLoading || (competitionLastUpdated === null && competition?.competition === null);
   
-  if (isCompetitionStillLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Image 
-            source={headerBg} 
-            style={styles.headerImage}
-            resizeMode="cover"
-          />
-          <View style={styles.headerOverlay}>
-            <Text style={[globalStyles.heading, styles.headerTitle]}>Zápasy</Text>
-            <View style={styles.headerBottom}>
-              <View style={styles.headerInfo}>
-                <Text style={[globalStyles.text, styles.headerTeam]}>{getTeamName()}</Text>
-                <Text style={[globalStyles.caption, styles.headerSeason]}>
-                  {getSeasonName()}
-                </Text>
-              </View>
-              <TouchableOpacity style={styles.filterButton} onPress={handleFilterOpen}>
-                <Text style={[globalStyles.caption, styles.filterButtonText]}>☰</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner inline size="large" />
-        </View>
-        <FilterModal
-          visible={filterModalVisible}
-          onClose={() => setFilterModalVisible(false)}
-          onApply={handleFilterApply}
-          selectedSeason={selectedSeason}
-          selectedTeam={selectedTeam}
-        />
-      </View>
-    );
-  }
+  // Combine loading states - if competition OR matches are loading, show loading
+  const isInitialLoading = isCompetitionStillLoading || (isLoading && matches?.length === 0);
 
   // Only show NoCompetitionView if competition is loaded and is null
-  if (competition?.competition === null) {
+  if (!isCompetitionStillLoading && competition?.competition === null) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -278,12 +243,15 @@ const MatchesListScreen: React.FC = () => {
         return null;
       }
       
+      const hasDetail = match.hasDetail !== false; // Default true pokud není specifikováno
+      const canOpenDetail = activeTab === 'results' && hasDetail;
+      
       return (
         <TouchableOpacity
           key={match.id}
-          onPress={() => activeTab === 'results' ? (navigation as any).navigate('MatchDetail', { matchId: match.id.toString() }) : null}
+          onPress={() => canOpenDetail ? (navigation as any).navigate('MatchDetail', { matchId: match.id.toString() }) : null}
           activeOpacity={1}
-          disabled={activeTab === 'calendar'}
+          disabled={activeTab === 'calendar' || !hasDetail}
         >
           <Card style={styles.matchCard}>
             <View style={styles.matchContent}>
@@ -409,7 +377,7 @@ const MatchesListScreen: React.FC = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
+        {isInitialLoading || isLoading ? (
           <LoadingSpinner inline size="large" />
         ) : (
           Object.entries(groupedMatches).map(([month, monthMatches]) => 
@@ -564,10 +532,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   teamName: {
-    fontWeight: 'bold',
     color: '#333333',
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 14,
   },
   matchInfo: {
     alignItems: 'center',
@@ -585,12 +552,6 @@ const styles = StyleSheet.create({
   },
   score: {
     fontWeight: 'bold',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
   },
 });
 

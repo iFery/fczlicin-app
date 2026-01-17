@@ -299,12 +299,15 @@ export default function HomeScreen() {
             }
           }
           
+          const hasDetail = match.hasDetail !== false; // Default true pokud není specifikováno
+          
           return (
             <TouchableOpacity
               key={match.id || index}
               style={styles.resultItem}
-              onPress={() => navigation.navigate('MatchDetail', { matchId: match.id.toString() })}
+              onPress={() => hasDetail ? navigation.navigate('MatchDetail', { matchId: match.id.toString() }) : null}
               activeOpacity={0.7}
+              disabled={!hasDetail}
             >
               <View style={styles.resultContent}>
                 <View style={styles.resultTeamColumn}>
@@ -381,11 +384,14 @@ export default function HomeScreen() {
     const isHome = nextMatch.homeTeam?.toLowerCase().includes('zličín') || 
                    nextMatch.homeTeam?.toLowerCase().includes('zlicin');
 
+    const hasDetail = nextMatch.hasDetail !== false; // Default true pokud není specifikováno
+    
     return (
       <TouchableOpacity 
         style={styles.matchCard}
-        onPress={() => (navigation as any).navigate('MatchDetail', { matchId: nextMatch.id.toString() })}
+        onPress={() => hasDetail ? (navigation as any).navigate('MatchDetail', { matchId: nextMatch.id.toString() }) : null}
         activeOpacity={1}
+        disabled={!hasDetail}
       >
         <View style={styles.matchCardHeader}>
           <Text style={[globalStyles.heading, styles.matchCardTitle]}>Nejbližší utkání</Text>

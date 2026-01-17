@@ -42,7 +42,8 @@ export interface TimelineData {
 export interface NotificationData {
   eventId?: string;
   artistId?: string;
-  type?: 'event' | 'artist' | 'general';
+  matchId?: string | number;
+  type?: 'event' | 'artist' | 'general' | 'match';
   [key: string]: unknown;
 }
 

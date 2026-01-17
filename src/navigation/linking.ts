@@ -137,7 +137,27 @@ export const linking = {
 export function parseNotificationToNavParams(
   data: Record<string, unknown>
 ): { screen: keyof RootStackParamList; params?: RootStackParamList[keyof RootStackParamList] } | null {
-  // Default to home for all notifications
+  // Check for match notification
+  if (data.matchId) {
+    const matchId = typeof data.matchId === 'number' ? data.matchId.toString() : String(data.matchId);
+    return {
+      screen: 'MatchDetail',
+      params: { matchId },
+    };
+  }
+  
+  // Check for artist/event notification
+  if (data.artistId) {
+    // Artist detail navigation would go here if needed
+    // For now, default to home
+  }
+  
+  if (data.eventId) {
+    // Event detail navigation would go here if needed
+    // For now, default to home
+  }
+  
+  // Default to home for all other notifications
   return {
     screen: 'HomeMain',
   };

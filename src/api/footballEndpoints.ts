@@ -38,6 +38,7 @@ export interface Match {
   isHome: boolean;
   homeTeamLogo?: string;
   awayTeamLogo?: string;
+  hasDetail?: boolean; // true pro standardní zápasy, false pro old zápasy
 }
 
 export interface MatchDetail extends Match {
