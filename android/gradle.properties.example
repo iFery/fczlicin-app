@@ -1,0 +1,9 @@
+# Android Signing Configuration
+# Copy this file to gradle.properties and fill in your keystore credentials
+# DO NOT COMMIT gradle.properties with real credentials!
+
+# Upload keystore for release builds
+MYAPP_UPLOAD_STORE_FILE=upload-keystore.jks
+MYAPP_UPLOAD_STORE_PASSWORD=your-keystore-password
+MYAPP_UPLOAD_KEY_ALIAS=your-key-alias
+MYAPP_UPLOAD_KEY_PASSWORD=your-key-password
