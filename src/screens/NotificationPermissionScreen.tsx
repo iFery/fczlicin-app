@@ -273,6 +273,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.5)',
+    marginBottom: 10,
   },
   secondaryButtonText: {
     fontFamily: typography.fontFamily.semiBold,

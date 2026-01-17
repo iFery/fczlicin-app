@@ -31,6 +31,7 @@ android/gradle.properties
 .cxx/
 *.keystore
 !debug.keystore
+android/app/keystore.properties
 
 # node.js
 node_modules/

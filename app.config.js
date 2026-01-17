@@ -8,8 +8,15 @@ module.exports = ({ config }) => {
   // 1. APP_ENV (explicit control for local builds)
   // 2. EAS_BUILD_PROFILE (EAS cloud builds)
   // 3. NODE_ENV (fallback)
-  // 4. 'development' (default)
-  const environment = process.env.APP_ENV || process.env.EAS_BUILD_PROFILE || process.env.NODE_ENV || 'development';
+  // 4. 'development' (default - only use 'production' if explicitly set)
+  //
+  // NOTE: For AAB/release builds, ensure APP_ENV=production or NODE_ENV=production
+  // is set during the build process (see package.json build:aab script)
+  const environment = process.env.APP_ENV || 
+                      process.env.EAS_BUILD_PROFILE || 
+                      process.env.NODE_ENV || 
+                      'development';
+  
   const isProduction = environment === 'production';
   const isDevelopment = environment === 'development';
 
@@ -17,12 +24,12 @@ module.exports = ({ config }) => {
   const apiUrl = process.env.API_URL || 'https://www.fczlicin.cz';
 
   // Firebase configuration files
-  // Build script copies files from config/firebase/{env}/ to standard locations
-  // Standard locations (used by native builds):
-  // - Android: android/app/google-services.json
-  // - iOS: ios/FCZlicin/GoogleService-Info.plist
-  const androidGoogleServicesFile = './android/app/google-services.json';
-  const iosGoogleServicesFile = './ios/FCZlicin/GoogleService-Info.plist';
+  // Build script copies files from config/firebase/{env}/ to root
+  // Firebase plugin copies them to correct native folders during prebuild:
+  // - Android: ./google-services.json (root) → android/app/google-services.json
+  // - iOS: ./GoogleService-Info.plist (root) → ios/{project}/GoogleService-Info.plist
+  const androidGoogleServicesFile = './google-services.json';
+  const iosGoogleServicesFile = './GoogleService-Info.plist';
 
   return {
     ...config,
@@ -30,7 +37,7 @@ module.exports = ({ config }) => {
       ...config.expo,
       name: 'FC Zličín',
       slug: 'fczlicin-app',
-      version: '1.1.0',
+      version: '1.1.2',
       orientation: 'portrait',
       scheme: 'fczlicin',
       icon: './assets/icon.png',
@@ -53,6 +60,7 @@ module.exports = ({ config }) => {
         },
         package: 'cz.fczlicin.app',
         googleServicesFile: androidGoogleServicesFile,
+        versionCode: 9, // Increment this for each release to Google Play
       },
       web: {
         favicon: './assets/favicon.png',
@@ -89,14 +97,7 @@ module.exports = ({ config }) => {
             },
           },
         ],
-        [
-          'expo-notifications',
-          {
-            icon: './assets/notification-icon.png',
-            color: '#ffffff',
-            sounds: [],
-          },
-        ],
+        'expo-notifications',
         [
           '@react-native-firebase/app',
           {
@@ -108,6 +109,10 @@ module.exports = ({ config }) => {
             },
           },
         ],
+        // Custom plugin to add release signing configuration
+        './plugins/withAndroidSigning.js',
+        // Custom plugin to add Firebase Crashlytics Gradle plugin
+        './plugins/withAndroidCrashlytics.js',
       ],
       extra: {
         eas: {

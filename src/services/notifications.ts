@@ -174,6 +174,27 @@ class NotificationService {
       }
     });
 
+    // CRITICAL: Check if app was opened by a notification tap
+    // This handles the case when app is closed and user taps notification
+    // getLastNotificationResponseAsync returns the notification that opened the app
+    try {
+      const lastNotificationResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastNotificationResponse) {
+        console.log('App opened by notification tap:', lastNotificationResponse);
+        const data = lastNotificationResponse.notification.request.content.data as Record<string, unknown> | undefined;
+        
+        if (data) {
+          // Use navigation helper with queue system
+          // Queue will handle navigation when navigation is ready
+          handleNotificationNavigation(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking last notification response:', error);
+      crashlyticsService.recordError(error as Error);
+      // Continue - this is not critical, listener will handle future notifications
+    }
+
     return {
       unsubscribeForeground: unsubscribeForeground || (() => {}),
       notificationListener,
