@@ -37,7 +37,7 @@ const MatchDetailScreen: React.FC = ({ route }: any) => {
     {
       key: 'stats',
       title: 'Statistiky',
-      component: <MatchPlayerStats players={playerStats?.players || []} />
+      component: <MatchPlayerStats players={playerStats?.players || []} match={match} />
     },
     {
       key: 'round',

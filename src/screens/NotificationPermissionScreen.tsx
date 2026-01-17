@@ -15,11 +15,12 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationPromptStore } from '../stores/notificationPromptStore';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import { notificationService } from '../services/notifications';
 import { crashlyticsService } from '../services/crashlytics';
+import { typography } from '../theme/ThemeProvider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,11 +31,10 @@ interface NotificationPermissionScreenProps {
 export function NotificationPermissionScreen({ onComplete }: NotificationPermissionScreenProps) {
   const { setPromptShown } = useNotificationPromptStore();
   const { favoriteTeamIds, matchStartReminderEnabled, matchResultNotificationEnabled } = useNotificationPreferencesStore();
+  const insets = useSafeAreaInsets();
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const logoScaleAnim = useRef(new Animated.Value(0.8)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Entrance animations
@@ -49,30 +49,8 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
         duration: 500,
         useNativeDriver: true,
       }),
-      Animated.spring(logoScaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
     ]).start();
-
-    // Pulse animation for notification bell
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [fadeAnim, slideAnim, logoScaleAnim, pulseAnim]);
+  }, [fadeAnim, slideAnim]);
 
   const handleAllowNotifications = async () => {
     try {
@@ -130,42 +108,27 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
           {
             opacity: fadeAnim,
             transform: [{ translateY: slideAnim }],
+            paddingTop: Math.max(24, insets.top),
+            paddingBottom: Math.max(24, insets.bottom),
           },
         ]}
       >
-        {/* Logo with animation */}
-        <Animated.View
-          style={[
-            styles.logoContainer,
-            {
-              transform: [{ scale: logoScaleAnim }],
-            },
-          ]}
-        >
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </Animated.View>
+        <View style={styles.topContent}>
+          {/* Notification icon */}
+          <View style={styles.iconContainer}>
+            <Image
+              source={require('../../assets/notification-permission-icon.png')}
+              style={styles.icon}
+              resizeMode="contain"
+            />
+          </View>
 
-        {/* Notification bell icon with pulse */}
-        <Animated.View
-          style={[
-            styles.iconContainer,
-            {
-              transform: [{ scale: pulseAnim }],
-            },
-          ]}
-        >
-          <Ionicons name="notifications" size={56} color="#FFFFFF" />
-        </Animated.View>
+          <Text style={styles.title}>Nezmeškej žádný zápas! 🔔</Text>
 
-        <Text style={styles.title}>Nezmeškej žádný zápas! 🔔</Text>
-
-        <Text style={styles.description}>
-          Povol notifikace a dostávej důležité informace o zápasech FC Zličín – připomínky před začátkem zápasů, výsledky a další novinky.
-        </Text>
+          <Text style={styles.description}>
+            Povol notifikace a dostávej důležité informace o zápasech FC Zličín – připomínky před začátkem zápasů, výsledky a další novinky.
+          </Text>
+        </View>
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -192,58 +155,60 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#014fa1', // FC Zličín blue
+    backgroundColor: '#0144bc', // FC Zličín blue
   },
   content: {
     flex: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  topContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
-  },
-  logoContainer: {
-    marginBottom: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: 160,
-    height: 160,
+    width: '100%',
   },
   iconContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
+  icon: {
+    width: 200,
+    height: 200,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontFamily: typography.fontFamily.bold,
+    fontSize: 24,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 36,
+    marginBottom: 12,
+    lineHeight: 32,
   },
   description: {
-    fontSize: 17,
+    fontFamily: typography.fontFamily.regular,
+    fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 48,
+    lineHeight: 24,
+    marginBottom: 32,
     paddingHorizontal: 16,
   },
   actions: {
     width: '100%',
     maxWidth: 400,
-    gap: 16,
+    gap: 12,
   },
   primaryButton: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 18,
+    paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -256,23 +221,23 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   primaryButtonText: {
+    fontFamily: typography.fontFamily.bold,
     color: '#014fa1',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
     letterSpacing: 0.3,
   },
   secondaryButton: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   secondaryButtonText: {
+    fontFamily: typography.fontFamily.semiBold,
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
   },
 });

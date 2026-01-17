@@ -8,6 +8,7 @@ import {
   ScrollView,
   Dimensions 
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeProvider';
 import SelectBox from './SelectBox';
 import { useSeasons, useTeams } from '../hooks/useFootballData';
@@ -34,6 +35,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
   const [localSelectedSeason, setLocalSelectedSeason] = useState(selectedSeason);
   const [localSelectedTeam, setLocalSelectedTeam] = useState(selectedTeam);
   const { globalStyles } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const { data: seasons } = useSeasons();
   const { data: teams } = useTeams();
@@ -85,7 +87,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
             />
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer]}>
             <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
               <Text style={[globalStyles.button, styles.cancelButtonText]}>Zrušit</Text>
             </TouchableOpacity>

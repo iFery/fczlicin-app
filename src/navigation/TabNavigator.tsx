@@ -270,11 +270,10 @@ export default function TabNavigator() {
           backgroundColor: '#FFFFFF',
           borderTopColor: '#E0E0E0',
           borderTopWidth: 1,
-          // Let React Navigation handle safe area automatically on iOS
-          // Only set explicit padding for Android
+          // Use safe area insets for both platforms to prevent overlap with system UI
           ...(Platform.OS === 'android' && {
-            height: 60,
-            paddingBottom: 8,
+            height: 60 + Math.max(insets?.bottom || 0, 0),
+            paddingBottom: Math.max(insets?.bottom || 0, 8),
             paddingTop: 8,
           }),
           // For iOS, React Navigation will automatically add safe area insets

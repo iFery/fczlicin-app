@@ -282,7 +282,7 @@ const MatchesListScreen: React.FC = () => {
         <TouchableOpacity
           key={match.id}
           onPress={() => activeTab === 'results' ? (navigation as any).navigate('MatchDetail', { matchId: match.id.toString() }) : null}
-          activeOpacity={activeTab === 'results' ? 0.7 : 1}
+          activeOpacity={1}
           disabled={activeTab === 'calendar'}
         >
           <Card style={styles.matchCard}>
@@ -316,9 +316,11 @@ const MatchesListScreen: React.FC = () => {
                     minute: '2-digit' 
                   })}
                 </Text>
-                <Text style={[globalStyles.title, styles.score, { color: getResultColor(match) }]}>
-                  {match.homeScore} : {match.awayScore}
-                </Text>
+                {(match.homeScore != null && match.awayScore != null) ? (
+                  <Text style={[globalStyles.title, styles.score, { color: getResultColor(match) }]}>
+                    {match.homeScore} : {match.awayScore}
+                  </Text>
+                ) : null}
               </View>
 
               <View style={styles.teamContainer}>

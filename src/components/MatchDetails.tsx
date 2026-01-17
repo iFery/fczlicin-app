@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useTheme } from '../theme/ThemeProvider';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme, typography } from '../theme/ThemeProvider';
 
 interface MatchDetailsProps {
   match: any;
@@ -16,6 +17,35 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match }) => {
     if (typeof value === 'boolean') return true;
     return String(value).trim().length > 0;
   };
+
+  // Check if match is upcoming (not yet played)
+  const isUpcoming = () => {
+    const isScheduled = match.status === 'scheduled';
+    const hasNoScore = (match.homeScore == null || match.homeScore === undefined) && 
+                       (match.awayScore == null || match.awayScore === undefined);
+    const isNotFinished = match.status !== 'finished' && match.status !== 'live';
+    const isFutureDate = match.date ? new Date(match.date) > new Date() : false;
+    
+    return isScheduled || (hasNoScore && isNotFinished && isFutureDate);
+  };
+
+  if (isUpcoming()) {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.placeholderContainer}>
+          <View style={styles.placeholderContent}>
+            <Ionicons name="calendar-outline" size={64} color="#CCCCCC" />
+            <Text style={[styles.placeholderTitle, { fontFamily: typography.fontFamily.bold }]}>
+              Zápas ještě nebyl odehrán
+            </Text>
+            <Text style={[styles.placeholderText, { fontFamily: typography.fontFamily.regular }]}>
+              Detaily a statistiky budou k dispozici po skončení zápasu
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -58,27 +88,29 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match }) => {
         )}
       </View>
 
-      <View style={styles.lineupsSection}>
-        <Text style={[globalStyles.title, styles.sectionTitle]}>Sestavy týmů</Text>
-        
-        {hasValidValue(match.homeTeam) && (
-          <View style={styles.lineupContainer}>
-            <Text style={[globalStyles.text, styles.teamTitle]}>{match.homeTeam}</Text>
-            {hasValidValue(match.homeLineup) && (
-              <Text style={[globalStyles.text, styles.lineupText]}>{match.homeLineup}</Text>
-            )}
-          </View>
-        )}
+      {(hasValidValue(match.homeLineup) || hasValidValue(match.awayLineup)) && (
+        <View style={styles.lineupsSection}>
+          <Text style={[globalStyles.title, styles.sectionTitle]}>Sestavy týmů</Text>
+          
+          {hasValidValue(match.homeTeam) && (
+            <View style={styles.lineupContainer}>
+              <Text style={[globalStyles.text, styles.teamTitle]}>{match.homeTeam}</Text>
+              {hasValidValue(match.homeLineup) && (
+                <Text style={[globalStyles.text, styles.lineupText]}>{match.homeLineup}</Text>
+              )}
+            </View>
+          )}
 
-        {hasValidValue(match.awayTeam) && (
-          <View style={styles.lineupContainer}>
-            <Text style={[globalStyles.text, styles.teamTitle]}>{match.awayTeam}</Text>
-            {hasValidValue(match.awayLineup) && (
-              <Text style={[globalStyles.text, styles.lineupText]}>{match.awayLineup}</Text>
-            )}
-          </View>
-        )}
-      </View>
+          {hasValidValue(match.awayTeam) && (
+            <View style={styles.lineupContainer}>
+              <Text style={[globalStyles.text, styles.teamTitle]}>{match.awayTeam}</Text>
+              {hasValidValue(match.awayLineup) && (
+                <Text style={[globalStyles.text, styles.lineupText]}>{match.awayLineup}</Text>
+              )}
+            </View>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -153,6 +185,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#333333',
+  },
+  placeholderContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 40,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    minHeight: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderTitle: {
+    fontSize: 20,
+    color: '#666666',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#999999',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });
 

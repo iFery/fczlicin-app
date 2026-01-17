@@ -385,13 +385,13 @@ export default function HomeScreen() {
       <TouchableOpacity 
         style={styles.matchCard}
         onPress={() => (navigation as any).navigate('MatchDetail', { matchId: nextMatch.id.toString() })}
-        activeOpacity={0.9}
+        activeOpacity={1}
       >
         <View style={styles.matchCardHeader}>
           <Text style={[globalStyles.heading, styles.matchCardTitle]}>Nejbližší utkání</Text>
           {nextMatch.round && (
             <View style={styles.roundBadge}>
-              <Text style={[globalStyles.caption, styles.roundBadgeText]}>{nextMatch.round}</Text>
+              <Text style={[globalStyles.caption, styles.roundBadgeText]}>{nextMatch.round}.kolo</Text>
             </View>
           )}
         </View>
@@ -616,6 +616,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     paddingHorizontal: 4,
+    minWidth: 0,
   },
   teamLogo: {
     width: 70,
@@ -654,6 +655,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333333',
     textAlign: 'center',
+    flexShrink: 1,
+    width: '100%',
   },
   matchInfo: {
     alignItems: 'center',

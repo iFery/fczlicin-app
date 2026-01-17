@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useTheme } from '../theme/ThemeProvider';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme, typography } from '../theme/ThemeProvider';
 
 interface Player {
   name: string;
@@ -12,12 +13,54 @@ interface Player {
 
 interface MatchPlayerStatsProps {
   players: Player[];
+  match?: any; // Optional match prop to check if it's upcoming
 }
 
-const MatchPlayerStats: React.FC<MatchPlayerStatsProps> = ({ players }) => {
+const MatchPlayerStats: React.FC<MatchPlayerStatsProps> = ({ players, match }) => {
   const { globalStyles } = useTheme();
 
+  // Check if match is upcoming (not yet played)
+  const isUpcoming = () => {
+    if (!match) {
+      // If no match prop, check if players array is empty as fallback
+      return players.length === 0;
+    }
+    const isScheduled = match.status === 'scheduled';
+    const hasNoScore = (match.homeScore == null || match.homeScore === undefined) && 
+                       (match.awayScore == null || match.awayScore === undefined);
+    const isNotFinished = match.status !== 'finished' && match.status !== 'live';
+    const isFutureDate = match.date ? new Date(match.date) > new Date() : false;
+    
+    return isScheduled || (hasNoScore && isNotFinished && isFutureDate);
+  };
+
   const sortedPlayers = [...players].sort((a, b) => b.minutes - a.minutes);
+  const upcoming = isUpcoming();
+
+  // Show placeholder if upcoming match or no stats available
+  if (upcoming || players.length === 0) {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.placeholderContainer}>
+          <View style={styles.placeholderContent}>
+            <Ionicons name="stats-chart-outline" size={64} color="#CCCCCC" />
+            <Text style={[styles.placeholderTitle, { fontFamily: typography.fontFamily.bold }]}>
+              {upcoming ? 'Statistiky zatím nejsou k dispozici' : 'Statistiky hráčů nejsou k dispozici'}
+            </Text>
+            {upcoming ? (
+              <Text style={[styles.placeholderText, { fontFamily: typography.fontFamily.regular }]}>
+                Statistiky hráčů budou zobrazeny po skončení zápasu
+              </Text>
+            ) : (
+              <Text style={[styles.placeholderText, { fontFamily: typography.fontFamily.regular }]}>
+                Statistiky hráčů pro tento zápas nejsou k dispozici
+              </Text>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -48,14 +91,6 @@ const MatchPlayerStats: React.FC<MatchPlayerStatsProps> = ({ players }) => {
           </Text>
         </View>
       ))}
-
-      {sortedPlayers.length === 0 && (
-        <View style={styles.emptyState}>
-          <Text style={[globalStyles.text, styles.emptyText]}>
-            Statistiky hráčů nejsou k dispozici
-          </Text>
-        </View>
-      )}
     </ScrollView>
   );
 };
@@ -96,16 +131,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flex: 1,
   },
-  emptyState: {
-    flex: 1,
+  placeholderContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 40,
+    marginVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    minHeight: 300,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
   },
-  emptyText: {
-    fontSize: 16,
+  placeholderContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderTitle: {
+    fontSize: 20,
     color: '#666666',
+    marginTop: 16,
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#999999',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
   },
 });
 

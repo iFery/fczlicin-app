@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeProvider';
 import { useTeams } from '../hooks/useFootballData';
 import type { Team } from '../api/footballEndpoints';
@@ -34,6 +35,7 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
 }) => {
   const { globalStyles } = useTheme();
   const { data: teams, loading, error, refetch } = useTeams();
+  const insets = useSafeAreaInsets();
   const [localSelectedIds, setLocalSelectedIds] = useState<number[]>(selectedTeamIds);
   const [hasRefetched, setHasRefetched] = useState(false);
 
@@ -238,7 +240,7 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
           )}
 
           {/* Footer */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
             <View style={styles.footerInfo}>
               <Text style={[globalStyles.caption, styles.footerText]}>
                 {selectedCount === 0 
