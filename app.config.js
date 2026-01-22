@@ -7,18 +7,79 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = ({ config }) => {
-  // Get environment with priority:
-  // 1. APP_ENV (explicit control for local builds)
+  // Environment detection priority:
+  // 1. APP_ENV (explicit control - set in package.json scripts)
   // 2. EAS_BUILD_PROFILE (EAS cloud builds)
   // 3. NODE_ENV (fallback)
-  // 4. 'development' (default - only use 'production' if explicitly set)
+  // 4. .xcode-build-env marker file (created by xcode-firebase-config.sh for Xcode builds)
+  // 5. Auto-detect from Firebase config comparison (if prod Firebase config matches)
+  // 6. 'development' (default fallback)
   //
-  // NOTE: For AAB/release builds, ensure APP_ENV=production or NODE_ENV=production
-  // is set during the build process (see package.json build:aab script)
-  const environment = process.env.APP_ENV || 
-                      process.env.EAS_BUILD_PROFILE || 
-                      process.env.NODE_ENV || 
-                      'development';
+  // WORKFLOW SUMMARY:
+  // - Development: npx expo run:android | run:ios (automatically sets APP_ENV=development)
+  // - Production Android: npm run build:aab (automatically sets APP_ENV=production)
+  // - Production iOS: npm run build:ios:prod (sets APP_ENV=production, then build in Xcode)
+  //   OR: Build directly in Xcode with Release config (xcode-firebase-config.sh will copy prod config)
+  //
+  // NOTE: app.config.js automatically copies correct Firebase config based on detected environment
+  
+  const rootDir = path.resolve(__dirname);
+  let environment = process.env.APP_ENV || 
+                    process.env.EAS_BUILD_PROFILE || 
+                    process.env.NODE_ENV;
+  
+  // Auto-detect from Xcode build marker file if environment is not explicitly set
+  // This handles the case when Xcode build script sets environment but APP_ENV is not set
+  if (!environment) {
+    const xcodeEnvMarker = path.join(rootDir, '.xcode-build-env');
+    if (fs.existsSync(xcodeEnvMarker)) {
+      try {
+        const markerContent = fs.readFileSync(xcodeEnvMarker, 'utf8').trim();
+        if (markerContent === 'production' || markerContent === 'development') {
+          environment = markerContent;
+          console.log(`✅ [app.config.js] Detected environment from Xcode build marker: ${environment}`);
+        }
+      } catch (e) {
+        // If reading marker fails, continue to Firebase config detection
+      }
+    }
+  }
+  
+  // Auto-detect from Firebase config if environment is still not set
+  // This handles the case when Xcode build script copies prod Firebase config
+  // but APP_ENV is not set and marker file doesn't exist
+  if (!environment) {
+    try {
+      const iosConfigPath = path.join(rootDir, 'GoogleService-Info.plist');
+      const prodConfigPath = path.join(rootDir, 'config', 'firebase', 'prod', 'GoogleService-Info.plist');
+      
+      if (fs.existsSync(iosConfigPath) && fs.existsSync(prodConfigPath)) {
+        // Read both configs and compare project_id
+        const iosConfigContent = fs.readFileSync(iosConfigPath, 'utf8');
+        const prodConfigContent = fs.readFileSync(prodConfigPath, 'utf8');
+        
+        // Extract PROJECT_ID from plist (simple regex match for PLIST_BUCKET format)
+        const extractProjectId = (content) => {
+          const match = content.match(/<key>PROJECT_ID<\/key>\s*<string>([^<]+)<\/string>/);
+          return match ? match[1] : null;
+        };
+        
+        const currentProjectId = extractProjectId(iosConfigContent);
+        const prodProjectId = extractProjectId(prodConfigContent);
+        
+        if (currentProjectId && prodProjectId && currentProjectId === prodProjectId) {
+          environment = 'production';
+          console.log(`✅ [app.config.js] Auto-detected PRODUCTION environment from Firebase config (project_id: ${currentProjectId})`);
+        }
+      }
+    } catch (e) {
+      // If detection fails, fall back to development
+      console.warn(`⚠️  [app.config.js] Could not auto-detect environment from Firebase config: ${e.message}`);
+    }
+  }
+  
+  // Final fallback to development
+  environment = environment || 'development';
   
   const isProduction = environment === 'production';
   const isDevelopment = environment === 'development';
@@ -27,7 +88,6 @@ module.exports = ({ config }) => {
   // This ensures correct config is used even when running `npx expo run:android` directly
   // CRITICAL: This runs BEFORE plugins, so Firebase plugin will use the correct config
   const envFolder = isProduction ? 'prod' : 'dev';
-  const rootDir = path.resolve(__dirname);
   const configDir = path.join(rootDir, 'config', 'firebase', envFolder);
   const androidTarget = path.join(rootDir, 'google-services.json');
   const iosTarget = path.join(rootDir, 'GoogleService-Info.plist');
@@ -122,7 +182,7 @@ module.exports = ({ config }) => {
       },
       assetBundlePatterns: ['**/*'],
       ios: {
-        supportsTablet: true,
+        supportsTablet: false,
         bundleIdentifier: 'cz.fczlicin.app',
         googleServicesFile: iosGoogleServicesFile,
       },
@@ -133,7 +193,10 @@ module.exports = ({ config }) => {
         },
         package: 'cz.fczlicin.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 11, // Increment this for each release to Google Play
+        versionCode: 16, // Increment this for each release to Google Play
+        permissions: [
+          'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
+        ],
       },
       web: {
         favicon: './assets/favicon.png',
@@ -182,6 +245,10 @@ module.exports = ({ config }) => {
             },
           },
         ],
+        // Custom plugin to ensure AD_ID permission is added to AndroidManifest.xml
+        './plugins/withAndroidAdIdPermission.js',
+        // Custom plugin to configure iOS app settings (display name, category, capabilities)
+        './plugins/withIosAppConfig.js',
         // Custom plugin to add release signing configuration
         './plugins/withAndroidSigning.js',
         // Custom plugin to add Firebase Crashlytics Gradle plugin

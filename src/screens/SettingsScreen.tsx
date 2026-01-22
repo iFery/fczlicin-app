@@ -16,9 +16,10 @@ import * as Notifications from 'expo-notifications';
 import TeamSelectionModal from '../components/TeamSelectionModal';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import { useTheme } from '../theme/ThemeProvider';
-import { useTeams } from '../hooks/useFootballData';
+import { useTeams, useCurrentSeason } from '../hooks/useFootballData';
 import { notificationService } from '../services/notifications';
 import { analyticsService } from '../services/analytics';
+import { footballApi, type Match } from '../api/footballEndpoints';
 
 export default function SettingsScreen() {
   const {
@@ -33,6 +34,7 @@ export default function SettingsScreen() {
   } = useNotificationPreferencesStore();
   const { globalStyles } = useTheme();
   const { data: teams } = useTeams();
+  const { data: currentSeason } = useCurrentSeason();
 
   const [notificationPermissionStatus, setNotificationPermissionStatus] = useState<string>('');
   const [showTeamSelectionModal, setShowTeamSelectionModal] = useState(false);
@@ -164,6 +166,56 @@ export default function SettingsScreen() {
         matchResultNotificationEnabled,
       });
     }
+
+    // Přeplánuj lokální notifikace pokud je "Připomínka začátku zápasu" zapnutá
+    if (matchStartReminderEnabled) {
+      await scheduleMatchNotificationsForTeams(teamIds, matchStartReminderEnabled);
+    }
+  };
+
+  const scheduleMatchNotificationsForTeams = async (teamIds: number[], reminderEnabled: boolean) => {
+    if (!reminderEnabled || teamIds.length === 0) {
+      // Zruš všechny match notifikace pokud jsou vypnuté
+      await notificationService.cancelMatchNotifications();
+      return;
+    }
+
+    if (!currentSeason) {
+      console.warn('Cannot schedule notifications: no current season');
+      return;
+    }
+
+    // Helper funkce pro získání matches
+    const getMatches = async (teamId: number, seasonId: number): Promise<Match[]> => {
+      try {
+        return await footballApi.getMatchCalendar(teamId, seasonId);
+      } catch (error) {
+        console.error(`Error fetching matches for team ${teamId}:`, error);
+        return [];
+      }
+    };
+
+    // Helper funkce pro získání current season
+    const getCurrentSeasonId = async (): Promise<number | null> => {
+      return currentSeason?.id || null;
+    };
+
+    // Helper funkce pro získání team name
+    const getTeamName = (teamId: number): string => {
+      const team = teams.find((t) => t.id === teamId);
+      return team?.name || `Tým ${teamId}`;
+    };
+
+    const scheduledCount = await notificationService.scheduleNotificationsForFavoriteTeams(
+      teamIds,
+      reminderEnabled,
+      getMatches,
+      getCurrentSeasonId,
+      getTeamName,
+      true // forceReschedule - vždy přeplánuj když uživatel mění nastavení
+    );
+
+    console.log(`📅 Naplánováno ${scheduledCount} notifikací pro ${teamIds.length} tým(ů)`);
   };
 
   const handleToggleMatchStartReminder = async (enabled: boolean) => {
@@ -177,6 +229,9 @@ export default function SettingsScreen() {
         matchResultNotificationEnabled,
       });
     }
+
+    // Naplánuj nebo zruš lokální notifikace pro zápasy
+    await scheduleMatchNotificationsForTeams(favoriteTeamIds, enabled);
   };
 
   const handleToggleMatchResultNotification = async (enabled: boolean) => {

@@ -60,11 +60,6 @@ export function useNotificationPrompt(
     return () => clearInterval(interval);
   }, [permissionStatus]);
 
-  // Reset daily check
-  useEffect(() => {
-    resetDaily();
-  }, [resetDaily]);
-
   // Show prompt logic (time-based)
   useEffect(() => {
     if (!options.enabled || options.triggerOnScroll) {

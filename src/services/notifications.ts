@@ -2,8 +2,9 @@ import * as Notifications from 'expo-notifications';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import dayjs from 'dayjs';
 import { handleNotificationNavigation } from './notificationNavigation';
-import { notificationApi } from '../api/footballEndpoints';
+import { notificationApi, type Match } from '../api/footballEndpoints';
 import { ensureFirebaseInitialized, isFirebaseReady, safeMessagingCall } from './firebase';
 import { crashlyticsService } from './crashlytics';
 import { analyticsService } from './analytics';
@@ -32,6 +33,7 @@ Notifications.setNotificationHandler({
 class NotificationService {
   private fcmToken: string | null = null;
   private notificationChannelCreated: boolean = false;
+  private lastMatchHashes: Map<number, string> = new Map(); // teamId -> hash of match times
 
   /**
    * Vytvoří notification channel pro Android
@@ -53,7 +55,6 @@ class NotificationService {
         description: 'Notifikace z aplikace FC Zličín',
       });
       this.notificationChannelCreated = true;
-      console.log('Notification channel created successfully');
     } catch (error) {
       console.error('Error creating notification channel:', error);
       crashlyticsService.recordError(error as Error);
@@ -496,6 +497,241 @@ class NotificationService {
       console.error('Error unregistering device token:', error);
       crashlyticsService.recordError(error as Error);
       return false;
+    }
+  }
+
+  /**
+   * Zruší všechny existující notifikace pro zápasy (identifikované prefixem)
+   */
+  async cancelMatchNotifications(): Promise<void> {
+    try {
+      const allNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      
+      // Najít notifikace s prefixem "match_"
+      const matchNotifications = allNotifications.filter(
+        (notification) => notification.identifier.startsWith('match_')
+      );
+
+      // Zrušit všechny match notifikace
+      await Promise.all(
+        matchNotifications.map((notification) =>
+          Notifications.cancelScheduledNotificationAsync(notification.identifier)
+        )
+      );
+    } catch (error) {
+      console.error('Error cancelling match notifications:', error);
+      crashlyticsService.recordError(error as Error);
+    }
+  }
+
+  /**
+   * Naplánuje lokální notifikace pro zápasy oblíbených týmů
+   * Notifikace budou naplánovány 10 minut před začátkem zápasu
+   * @param matches Array of matches to schedule notifications for
+   * @param teamName Team name for notification message (optional)
+   */
+  async scheduleMatchNotifications(matches: Match[], teamName?: string): Promise<number> {
+    try {
+      // Zajisti, že notification channel existuje
+      await this.ensureNotificationChannel();
+
+      // Zkontroluj permission
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('Cannot schedule match notifications: permission not granted');
+        return 0;
+      }
+
+      const now = dayjs();
+      let scheduledCount = 0;
+
+      for (const match of matches) {
+        // Pouze scheduled zápasy v budoucnosti
+        if (match.status !== 'scheduled') {
+          continue;
+        }
+
+        // Parse date and time
+        const matchDate = dayjs(match.date);
+        if (!matchDate.isValid()) {
+          console.warn(`Invalid match date for match ${match.id}: ${match.date}`);
+          continue;
+        }
+
+        // Pokud má zápas čas, použij ho; jinak použij 12:00 jako default
+        let matchDateTime = matchDate;
+        if (match.time) {
+          const [hours, minutes] = match.time.split(':').map(Number);
+          if (!isNaN(hours) && !isNaN(minutes)) {
+            matchDateTime = matchDate.hour(hours).minute(minutes).second(0).millisecond(0);
+          } else {
+            matchDateTime = matchDate.hour(12).minute(0).second(0).millisecond(0);
+          }
+        } else {
+          matchDateTime = matchDate.hour(12).minute(0).second(0).millisecond(0);
+        }
+
+        // Notifikace 10 minut před zápasem
+        const notificationTime = matchDateTime.subtract(10, 'minutes');
+
+        // Pouze pokud je v budoucnosti
+        if (notificationTime.isBefore(now)) {
+          continue;
+        }
+
+        // Vytvoř název pro notifikaci
+        const matchTitle = match.isHome 
+          ? `${match.homeTeam} vs ${match.awayTeam}`
+          : `${match.awayTeam} vs ${match.homeTeam}`;
+        
+        const notificationTitle = teamName 
+          ? `${teamName}: Začíná zápas`
+          : 'Začíná zápas';
+        
+        const notificationBody = `Zápas ${matchTitle} začíná za 10 minut`;
+
+        try {
+          await Notifications.scheduleNotificationAsync({
+            identifier: `match_${match.id}`,
+            content: {
+              title: notificationTitle,
+              body: notificationBody,
+              data: {
+                matchId: match.id.toString(),
+                type: 'match',
+              },
+              sound: true,
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: notificationTime.toDate(),
+            },
+          });
+
+          scheduledCount++;
+        } catch (error) {
+          console.error(`Error scheduling notification for match ${match.id}:`, error);
+          crashlyticsService.recordError(error as Error);
+        }
+      }
+
+      return scheduledCount;
+    } catch (error) {
+      console.error('Error scheduling match notifications:', error);
+      crashlyticsService.recordError(error as Error);
+      return 0;
+    }
+  }
+
+  /**
+   * Vytvoří hash z match times pro porovnání
+   */
+  private getMatchesHash(matches: Match[]): string {
+    return matches
+      .filter(m => m.status === 'scheduled')
+      .map(m => `${m.id}:${m.date}:${m.time || ''}`)
+      .sort()
+      .join('|');
+  }
+
+  /**
+   * Naplánuje notifikace pro všechny oblíbené týmy
+   * Tato funkce by měla být volána při změně oblíbených týmů nebo matchStartReminderEnabled
+   * Automaticky porovnává hash a přeplánuje jen když se změnily časy zápasů
+   * @param favoriteTeamIds Array of favorite team IDs
+   * @param matchStartReminderEnabled Whether match start reminders are enabled
+   * @param getMatches Function to get matches for a team (teamId, seasonId) => Promise<Match[]>
+   * @param getCurrentSeason Function to get current season ID => Promise<number | null>
+   * @param getTeamName Function to get team name (teamId) => string
+   */
+  async scheduleNotificationsForFavoriteTeams(
+    favoriteTeamIds: number[],
+    matchStartReminderEnabled: boolean,
+    getMatches: (teamId: number, seasonId: number) => Promise<Match[]>,
+    getCurrentSeason: () => Promise<number | null>,
+    getTeamName: (teamId: number) => string,
+    forceReschedule: boolean = false
+  ): Promise<number> {
+    try {
+      console.log(`[scheduleNotificationsForFavoriteTeams] Called with teams: ${favoriteTeamIds}, enabled: ${matchStartReminderEnabled}, force: ${forceReschedule}`);
+      
+      // Pokud jsou notifikace vypnuté, zruš všechny match notifikace
+      if (!matchStartReminderEnabled || favoriteTeamIds.length === 0) {
+        console.log('[scheduleNotificationsForFavoriteTeams] Notifications disabled or no teams, cancelling all');
+        await this.cancelMatchNotifications();
+        this.lastMatchHashes.clear();
+        return 0;
+      }
+
+      // Zkontroluj permission
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('[scheduleNotificationsForFavoriteTeams] Permission not granted');
+        await this.cancelMatchNotifications();
+        this.lastMatchHashes.clear();
+        return 0;
+      }
+
+      // Získej aktuální sezónu
+      const currentSeasonId = await getCurrentSeason();
+      if (!currentSeasonId) {
+        console.warn('[scheduleNotificationsForFavoriteTeams] No current season');
+        return 0;
+      }
+
+      // Zkontroluj, zda se změnily zápasy - porovnej hash pro každý tým
+      let needsReschedule = forceReschedule;
+      const currentHashes = new Map<number, string>();
+
+      for (const teamId of favoriteTeamIds) {
+        try {
+          const matches = await getMatches(teamId, currentSeasonId);
+          const hash = this.getMatchesHash(matches);
+          currentHashes.set(teamId, hash);
+
+          const lastHash = this.lastMatchHashes.get(teamId);
+          if (lastHash !== hash) {
+            console.log(`[scheduleNotificationsForFavoriteTeams] Hash changed for team ${teamId}`);
+            needsReschedule = true;
+          }
+        } catch (error) {
+          console.error(`Error checking matches for team ${teamId}:`, error);
+        }
+      }
+
+      // Pokud se nic nezměnilo, není potřeba přeplánovávat
+      if (!needsReschedule && this.lastMatchHashes.size > 0) {
+        console.log('[scheduleNotificationsForFavoriteTeams] No changes detected, skipping reschedule');
+        return 0;
+      }
+      
+      console.log('[scheduleNotificationsForFavoriteTeams] Rescheduling notifications...');
+
+      // Zruš staré notifikace (pokud se změnilo nebo pokud to je první naplánování)
+      await this.cancelMatchNotifications();
+
+      // Naplánuj notifikace pro každý oblíbený tým
+      let totalScheduled = 0;
+      for (const teamId of favoriteTeamIds) {
+        try {
+          const matches = await getMatches(teamId, currentSeasonId);
+          const teamName = getTeamName(teamId);
+          const scheduled = await this.scheduleMatchNotifications(matches, teamName);
+          totalScheduled += scheduled;
+        } catch (error) {
+          console.error(`Error scheduling notifications for team ${teamId}:`, error);
+          crashlyticsService.recordError(error as Error);
+        }
+      }
+
+      // Ulož hash pro příští porovnání
+      this.lastMatchHashes = currentHashes;
+
+      return totalScheduled;
+    } catch (error) {
+      console.error('Error scheduling notifications for favorite teams:', error);
+      crashlyticsService.recordError(error as Error);
+      return 0;
     }
   }
 }

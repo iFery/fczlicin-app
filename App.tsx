@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, StatusBar, Animated, Image, Easing, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import {
   Rajdhani_400Regular,
   Rajdhani_500Medium,
@@ -118,23 +119,41 @@ function AppContent() {
   // OPTIMIZATION: Set showNotificationScreen immediately (no delay) to prevent app fade-in
   useEffect(() => {
     if (isReady && !showUpdateScreen && !showNotificationScreen && !showApp && Platform.OS !== 'web') {
-      // Check if we should show the prompt
-      const shouldShow = shouldShowPrompt();
+      // Check if we should show the prompt - but ALSO verify actual OS permission status
+      // This ensures we don't show the prompt if permissions were already granted
+      const checkAndShow = async () => {
+        const shouldShow = shouldShowPrompt();
+        
+        // Additionally check the actual permission status from OS
+        // This is critical: if permission is already granted, we should NOT show the prompt
+        // even if the store flag hasn't been updated
+        if (shouldShow) {
+          const { status: actualPermissionStatus } = await Notifications.getPermissionsAsync();
+          
+          if (actualPermissionStatus === 'granted') {
+            // Permission already granted, don't show prompt
+            console.log('Notification permission already granted, skipping prompt');
+            return;
+          }
+        }
+        
+        if (shouldShow) {
+          // Set showNotificationScreen immediately to prevent app fade-in from running
+          // This ensures notification screen has priority
+          setShowNotificationScreen(true);
+          
+          // Set notification screen opacity immediately (so it's visible)
+          notificationScreenOpacity.setValue(1);
+          
+          // Hide loading screen immediately (notification screen should be visible)
+          setShowLoading(false);
+          loadingOpacity.setValue(0);
+        }
+        // If shouldShow is false, don't show notification screen
+        // App fade-in will handle showing the app (in separate useEffect)
+      };
       
-      if (shouldShow) {
-        // Set showNotificationScreen immediately to prevent app fade-in from running
-        // This ensures notification screen has priority
-        setShowNotificationScreen(true);
-        
-        // Set notification screen opacity immediately (so it's visible)
-        notificationScreenOpacity.setValue(1);
-        
-        // Hide loading screen immediately (notification screen should be visible)
-        setShowLoading(false);
-        loadingOpacity.setValue(0);
-      }
-      // If shouldShow is false, don't show notification screen
-      // App fade-in will handle showing the app (in separate useEffect)
+      checkAndShow();
     }
   }, [isReady, showUpdateScreen, showNotificationScreen, showApp, shouldShowPrompt, loadingOpacity, notificationScreenOpacity]);
 

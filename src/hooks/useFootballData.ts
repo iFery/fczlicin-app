@@ -90,7 +90,12 @@ export function useCompetition(teamId: number, seasonId: number) {
 export function useMatchCalendar(teamId: number, seasonId: number) {
   return useStaleWhileRevalidate<Match[]>({
     cacheKey: CACHE_KEY_PATTERNS.MATCH_CALENDAR(teamId, seasonId),
-    fetchFn: () => footballApi.getMatchCalendar(teamId, seasonId),
+    fetchFn: () => {
+      if (teamId <= 0 || seasonId <= 0) {
+        return Promise.resolve([]);
+      }
+      return footballApi.getMatchCalendar(teamId, seasonId);
+    },
     defaultData: [],
     errorMessage: 'Failed to load match calendar',
     ttl: CACHE_TTL.MATCH_CALENDAR,

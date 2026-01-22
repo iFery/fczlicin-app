@@ -23,6 +23,8 @@ import { notificationService } from '../services/notifications';
 import { crashlyticsService } from '../services/crashlytics';
 import { analyticsService } from '../services/analytics';
 import { typography } from '../theme/ThemeProvider';
+import { footballApi, type Match } from '../api/footballEndpoints';
+import { useCurrentSeason } from '../hooks/useFootballData';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,6 +35,7 @@ interface NotificationPermissionScreenProps {
 export function NotificationPermissionScreen({ onComplete }: NotificationPermissionScreenProps) {
   const { setPromptShown } = useNotificationPromptStore();
   const { favoriteTeamIds, matchStartReminderEnabled, matchResultNotificationEnabled, setFavoriteTeamIds } = useNotificationPreferencesStore();
+  const { data: currentSeason } = useCurrentSeason();
   const insets = useSafeAreaInsets();
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   
@@ -98,6 +101,55 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
         });
         
         crashlyticsService.log('device_registered_with_notification_api');
+
+        // Naplánuj lokální notifikace pro zápasy (pokud jsou povolené)
+        if (matchStartReminderEnabled && finalFavoriteTeamIds.length > 0) {
+          try {
+            // Helper funkce pro získání matches
+            const getMatches = async (teamId: number, seasonId: number): Promise<Match[]> => {
+              try {
+                return await footballApi.getMatchCalendar(teamId, seasonId);
+              } catch (error) {
+                console.error(`Error fetching matches for team ${teamId}:`, error);
+                return [];
+              }
+            };
+
+            // Helper funkce pro získání current season
+            // Volá API přímo místo spoléhání na hook data, aby to fungovalo i když uživatel klikne rychle
+            const getCurrentSeasonId = async (): Promise<number | null> => {
+              try {
+                const seasons = await footballApi.getSeasons();
+                if (seasons.length === 0) return null;
+                
+                // Vrátí sezónu s nejvyšším ID (aktuální sezónu)
+                const maxSeasonId = Math.max(...seasons.map(s => s.id));
+                return maxSeasonId;
+              } catch (error) {
+                console.error('Error fetching current season:', error);
+                return null;
+              }
+            };
+
+            // Helper funkce pro získání team name (pro zobrazení v notifikaci použijeme jednoduchý název)
+            const getTeamName = (teamId: number): string => {
+              // Pro team ID 1 použijeme "Muži A", jinak obecný název
+              if (teamId === 1) return 'Muži A';
+              return `Tým ${teamId}`;
+            };
+
+            await notificationService.scheduleNotificationsForFavoriteTeams(
+              finalFavoriteTeamIds,
+              matchStartReminderEnabled,
+              getMatches,
+              getCurrentSeasonId,
+              getTeamName
+            );
+          } catch (error) {
+            console.error('Error scheduling match notifications after permission grant:', error);
+            // Nechceme zablokovat dokončení, pokud naplánování selže
+          }
+        }
       } else {
         crashlyticsService.log('notification_permission_denied');
         

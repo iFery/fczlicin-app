@@ -8,26 +8,10 @@ import { debouncedStorage } from '../utils/debouncedStorage';
 
 interface NotificationPromptStore {
   notificationPromptShown: boolean;
-  lastPromptDate: string | null; // ISO date string
+  lastPromptDate: string | null; // ISO date string (kept for backward compatibility but not used)
   setPromptShown: (shown: boolean) => void;
   shouldShowPrompt: () => boolean;
-  resetDaily: () => void;
-}
-
-/**
- * Check if last prompt was shown today
- */
-function isToday(dateString: string | null): boolean {
-  if (!dateString) return false;
-  
-  const lastDate = new Date(dateString);
-  const today = new Date();
-  
-  return (
-    lastDate.getFullYear() === today.getFullYear() &&
-    lastDate.getMonth() === today.getMonth() &&
-    lastDate.getDate() === today.getDate()
-  );
+  resetDaily: () => void; // Kept for backward compatibility but does nothing
 }
 
 export const useNotificationPromptStore = create<NotificationPromptStore>()(
@@ -45,21 +29,13 @@ export const useNotificationPromptStore = create<NotificationPromptStore>()(
 
       shouldShowPrompt: () => {
         const state = get();
-        // Show if not shown today (reset daily)
-        if (state.lastPromptDate) {
-          return !isToday(state.lastPromptDate);
-        }
+        // Show only once - if user dismissed/skipped, never show again
         return !state.notificationPromptShown;
       },
 
       resetDaily: () => {
-        const state = get();
-        // Reset if last prompt was from a different day
-        if (state.lastPromptDate && !isToday(state.lastPromptDate)) {
-          set({
-            notificationPromptShown: false,
-          });
-        }
+        // No-op - kept for backward compatibility
+        // We no longer reset the prompt daily
       },
     }),
     {

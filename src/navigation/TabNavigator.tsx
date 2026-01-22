@@ -16,6 +16,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import NewsScreen from '../screens/NewsScreen';
 import NewsDetailScreen from '../screens/NewsDetailScreen';
 import DebugScreen from '../screens/DebugScreen';
+import NotificationsListScreen from '../screens/NotificationsListScreen';
 import type { RootStackParamList } from './linking';
 
 export type TabParamList = {
@@ -232,6 +233,18 @@ function InfoStack() {
         options={{ 
           headerShown: true,
           title: 'Debug',
+          headerStyle: { backgroundColor: '#014fa1' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { color: '#FFFFFF' },
+          headerTitleAlign: 'center',
+        }} 
+      />
+      <Stack.Screen 
+        name="NotificationsList" 
+        component={NotificationsListScreen} 
+        options={{ 
+          headerShown: true,
+          title: 'Notifikace',
           headerStyle: { backgroundColor: '#014fa1' },
           headerTintColor: '#FFFFFF',
           headerTitleStyle: { color: '#FFFFFF' },

@@ -48,6 +48,7 @@ web-build/
 .env
 .env.local
 .env.*.local
+.xcode-build-env
 
 # Firebase config
 # PROD configs should never be committed (contain sensitive keys)

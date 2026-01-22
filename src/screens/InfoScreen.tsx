@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/linking';
 import { Ionicons } from '@expo/vector-icons';
+import { Linking } from 'react-native';
 
 type InfoScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,6 +26,12 @@ export default function InfoScreen() {
       onPress: () => navigation.navigate('News'),
     },
     {
+      id: 'notifications',
+      title: 'Notifikace',
+      icon: 'notifications-outline',
+      onPress: () => navigation.navigate('NotificationsList'),
+    },
+    {
       id: 'settings',
       title: 'Nastavení',
       icon: 'settings',
@@ -35,6 +42,14 @@ export default function InfoScreen() {
       title: 'Debug',
       icon: 'bug',
       onPress: () => navigation.navigate('Debug'),
+    },
+    {
+      id: 'privacy',
+      title: 'Zásady ochrany osobních údajů',
+      icon: 'document-text-outline',
+      onPress: () => {
+        Linking.openURL('https://www.fczlicin.cz/privacy-policy/');
+      },
     },
   ];
 
