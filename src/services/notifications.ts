@@ -1,5 +1,4 @@
 import * as Notifications from 'expo-notifications';
-import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import dayjs from 'dayjs';
@@ -737,4 +736,3 @@ class NotificationService {
 }
 
 export const notificationService = new NotificationService();
-

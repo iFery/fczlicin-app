@@ -193,7 +193,7 @@ module.exports = ({ config }) => {
         },
         package: 'cz.fczlicin.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 16, // Increment this for each release to Google Play
+        versionCode: 17, // Increment this for each release to Google Play
         permissions: [
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],

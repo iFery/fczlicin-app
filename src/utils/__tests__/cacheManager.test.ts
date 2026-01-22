@@ -12,7 +12,13 @@ import {
   getCacheAge,
   hasAnyValidCache,
   getOldestCacheAge,
+  checkAndClearCacheOnVersionUpgrade,
 } from '../cacheManager';
+
+jest.mock('expo-constants', () => ({
+  expoConfig: { version: '1.0.0' },
+  manifest2: { extra: { expoClient: { version: '1.0.0' } } },
+}));
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -322,6 +328,26 @@ describe('cacheManager', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('checkAndClearCacheOnVersionUpgrade', () => {
+    it('should clear cache when version changes', async () => {
+      mockedAsyncStorage.getItem.mockResolvedValueOnce('0.9.0');
+      mockedAsyncStorage.getAllKeys.mockResolvedValueOnce(['cache_key1', 'other_key']);
+
+      const result = await checkAndClearCacheOnVersionUpgrade();
+
+      expect(result).toBe(true);
+      expect(mockedAsyncStorage.multiRemove).toHaveBeenCalledWith(['cache_key1']);
+      expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith('@app_version', '1.0.0');
+    });
+
+    it('should store version on first launch without clearing cache', async () => {
+      mockedAsyncStorage.getItem.mockResolvedValueOnce(null);
+
+      const result = await checkAndClearCacheOnVersionUpgrade();
+
+      expect(result).toBe(false);
+      expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith('@app_version', '1.0.0');
+    });
+  });
 });
-
-

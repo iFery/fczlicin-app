@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { colors } from '../theme/colors';
 
 interface LoadingSpinnerProps {
   inline?: boolean;
@@ -13,14 +14,14 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   if (inline) {
     return (
       <View style={styles.inlineContainer}>
-        <ActivityIndicator size={size} color="#014fa1" />
+        <ActivityIndicator size={size} color={colors.brandBlue} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size={size} color="#014fa1" />
+      <ActivityIndicator size={size} color={colors.brandBlue} />
     </View>
   );
 };
@@ -30,16 +31,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   inlineContainer: {
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 8,
     margin: 20,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

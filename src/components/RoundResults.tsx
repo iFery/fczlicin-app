@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
-import { useNavigation } from '@react-navigation/native';
+import { colors } from '../theme/colors';
 
 interface Match {
   id: number;
@@ -19,11 +19,6 @@ interface RoundResultsProps {
 
 const RoundResults: React.FC<RoundResultsProps> = ({ matches, currentMatchId }) => {
   const { globalStyles } = useTheme();
-  const navigation = useNavigation();
-
-  const handleMatchPress = (matchId: number) => {
-    (navigation as any).navigate('MatchDetail', { matchId: matchId.toString() });
-  };
 
   return (
     <ScrollView style={styles.container}>
@@ -33,7 +28,7 @@ const RoundResults: React.FC<RoundResultsProps> = ({ matches, currentMatchId }) 
         </Text>
       </View>
 
-      {matches.map((match, index) => (
+      {matches.map((match) => (
         <View
           key={match.id}
           style={[
@@ -90,24 +85,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginBottom: 4,
   },
-  headerSubtitle: {
-    color: '#666666',
-    fontSize: 14,
-  },
   matchCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: colors.black,
   },
   currentMatch: {
     borderWidth: 2,
-    borderColor: '#014fa1',
-    backgroundColor: '#F8F9FA',
+    borderColor: colors.brandBlue,
+    backgroundColor: colors.gray200,
   },
   matchContent: {
     flexDirection: 'row',
@@ -122,7 +113,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
     textAlign: 'center',
-    color: '#333333',
+    color: colors.gray900,
   },
   scoreContainer: {
     flex: 1,
@@ -131,17 +122,17 @@ const styles = StyleSheet.create({
   score: {
     fontWeight: 'bold',
     fontSize: 16,
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   currentMatchIndicator: {
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: colors.gray500,
     alignItems: 'center',
   },
   currentMatchText: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontWeight: '600',
     fontSize: 12,
   },
@@ -153,7 +144,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666666',
+    color: colors.gray700,
     textAlign: 'center',
   },
 });

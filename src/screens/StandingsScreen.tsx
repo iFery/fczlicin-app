@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -10,6 +10,10 @@ import {
 import { useStandings, useSeasons, useTeams, useCompetition, useCurrentSeason } from '../hooks/useFootballData';
 import { LoadingSpinner, ErrorView, FilterModal, NoCompetitionView } from '../components';
 import { useTheme } from '../theme/ThemeProvider';
+import type { Standing } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
+import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
 
 import headerBg from 'assets/header-standings-bg.png';
 
@@ -18,24 +22,35 @@ const StandingsScreen: React.FC = () => {
   const { data: teams, loading: teamsLoading } = useTeams();
   const { data: currentSeason } = useCurrentSeason();
   
-  // Initialize with current season and first team, or defaults
-  const defaultSeason = currentSeason?.id?.toString() || seasons?.[0]?.id?.toString() || '22';
-  const defaultTeam = teams?.[0]?.id?.toString() || '1';
-  
-  const [selectedSeason, setSelectedSeason] = useState<string>(defaultSeason);
-  const [selectedTeam, setSelectedTeam] = useState<string>(defaultTeam);
+  const [selectedSeason, setSelectedSeason] = useState<string>('');
+  const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const { globalStyles } = useTheme();
+  const lastViewRef = useRef<{ seasonId: string; teamId: string }>({ seasonId: '', teamId: '' });
 
   // Update selected season/team when data loads
   useEffect(() => {
-    if (currentSeason && currentSeason.id.toString() !== selectedSeason) {
-      setSelectedSeason(currentSeason.id.toString());
+    const seasonIds = seasons?.map((season) => season.id.toString()) ?? [];
+    const teamIds = teams?.map((team) => team.id.toString()) ?? [];
+
+    if (!selectedSeason) {
+      if (currentSeason) {
+        setSelectedSeason(currentSeason.id.toString());
+      } else if (seasonIds.length > 0) {
+        setSelectedSeason(seasonIds[0]);
+      }
+    } else if (seasonIds.length > 0 && !seasonIds.includes(selectedSeason)) {
+      setSelectedSeason(currentSeason?.id.toString() || seasonIds[0]);
     }
-    if (teams && teams.length > 0 && teams[0].id.toString() !== selectedTeam) {
-      setSelectedTeam(teams[0].id.toString());
+
+    if (!selectedTeam) {
+      if (teamIds.length > 0) {
+        setSelectedTeam(teamIds[0]);
+      }
+    } else if (teamIds.length > 0 && !teamIds.includes(selectedTeam)) {
+      setSelectedTeam(teamIds[0]);
     }
-  }, [currentSeason, teams]);
+  }, [currentSeason, seasons, teams, selectedSeason, selectedTeam]);
 
   // Convert string IDs to numbers for hooks
   const teamId = parseInt(selectedTeam, 10) || 1;
@@ -44,6 +59,9 @@ const StandingsScreen: React.FC = () => {
   const { data: standings, loading: isLoading, error, refetch } = useStandings(teamId, seasonId);
   const { data: competition, loading: competitionLoading, lastUpdated: competitionLastUpdated } = useCompetition(teamId, seasonId);
 
+  const competitionValue = Array.isArray(competition) && competition.length > 0 
+    ? competition[0]?.competition 
+    : competition?.competition;
 
   // Získáme názvy týmu a sezóny z cache nebo použijeme výchozí hodnoty
   const getTeamName = () => {
@@ -60,6 +78,12 @@ const StandingsScreen: React.FC = () => {
 
 
   const handleFilterApply = (seasonId: string, teamId: string) => {
+    analyticsService.logEvent(AnalyticsEvent.STANDINGS_FILTER_APPLY, {
+      season_id: seasonId,
+      team_id: teamId,
+      previous_season_id: selectedSeason,
+      previous_team_id: selectedTeam,
+    });
     setSelectedSeason(seasonId);
     setSelectedTeam(teamId);
   };
@@ -68,62 +92,36 @@ const StandingsScreen: React.FC = () => {
     setFilterModalVisible(true);
   };
 
+  // Show loading while competition is being fetched or hasn't been loaded yet
+  // Check if competition is still loading OR if it hasn't been loaded yet (lastUpdated is null)
+  // AND competition is null (which means it's still defaultData)
+  const isCompetitionStillLoading = competitionLoading || (competitionLastUpdated === null && competition?.competition === null);
+  const isInitialLoading = isCompetitionStillLoading || (isLoading && standings?.length === 0);
+
+  useEffect(() => {
+    if (!isInitialLoading && selectedSeason && selectedTeam) {
+      const hasChanged =
+        lastViewRef.current.seasonId !== selectedSeason ||
+        lastViewRef.current.teamId !== selectedTeam;
+      if (hasChanged) {
+        analyticsService.logEvent(AnalyticsEvent.STANDINGS_VIEW, {
+          season_id: selectedSeason,
+          team_id: selectedTeam,
+          competition: competitionValue ?? undefined,
+        });
+        lastViewRef.current = { seasonId: selectedSeason, teamId: selectedTeam };
+      }
+    }
+  }, [isInitialLoading, selectedSeason, selectedTeam, competitionValue]);
+
   // Zobrazit celostránkový loader pouze při chybě
   if (error) {
     return <ErrorView error={new Error(error)} onRetry={refetch} />;
   }
 
-  // Show loading while competition is being fetched or hasn't been loaded yet
-  // Check if competition is still loading OR if it hasn't been loaded yet (lastUpdated is null)
-  // AND competition is null (which means it's still defaultData)
-  const isCompetitionStillLoading = competitionLoading || (competitionLastUpdated === null && competition?.competition === null);
-  
-  if (isCompetitionStillLoading) {
-    return (
-      <View style={styles.container}>
-        {/* Záhlaví */}
-        <View style={styles.header}>
-          <Image 
-            source={headerBg} 
-            style={styles.headerImage}
-            resizeMode="cover"
-          />
-          <View style={styles.headerOverlay}>
-            <Text style={[globalStyles.heading, styles.headerTitle]}>Tabulka</Text>
-            <View style={styles.headerBottom}>
-              <View style={styles.headerInfo}>
-                <Text style={[globalStyles.text, styles.headerTeam]}>{getTeamName()}</Text>
-                <Text style={[globalStyles.caption, styles.headerSeason]}>
-                  {getSeasonName()}
-                </Text>
-              </View>
-              <TouchableOpacity style={styles.filterButton} onPress={handleFilterOpen}>
-                <Text style={[globalStyles.caption, styles.filterButtonText]}>☰</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner inline size="large" />
-        </View>
-        {/* Filter Modal */}
-        <FilterModal
-          visible={filterModalVisible}
-          onClose={() => setFilterModalVisible(false)}
-          onApply={handleFilterApply}
-          selectedSeason={selectedSeason}
-          selectedTeam={selectedTeam}
-        />
-      </View>
-    );
-  }
-
   // Kontrola, zda tým v dané sezóně hrál nějakou soutěž
   // Only show NoCompetitionView if competition is loaded and is null
-  const competitionValue = Array.isArray(competition) && competition.length > 0 
-    ? competition[0]?.competition 
-    : competition?.competition;
-  if (competitionValue === null) {
+  if (!isCompetitionStillLoading && competitionValue === null) {
     return (
       <View style={styles.container}>
         {/* Záhlaví */}
@@ -174,12 +172,12 @@ const StandingsScreen: React.FC = () => {
     );
   }
 
-  const renderStandingItem = (item: any, _index: number) => (
+  const renderStandingItem = (item: Standing) => (
     <View key={item.team} style={[
       styles.standingRow,
       item.team === 'FC Zličín' && styles.fczlicinRow
     ]}>
-      <View style={[styles.positionContainer]}>
+      <View style={styles.positionContainer}>
         <Text style={[globalStyles.caption, styles.position]}>{item.position}</Text>
       </View>
       <Text style={[globalStyles.text, styles.teamName]}>{item.team}</Text>
@@ -230,7 +228,7 @@ const StandingsScreen: React.FC = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
+        {isInitialLoading || isLoading ? (
           <LoadingSpinner inline size="large" />
         ) : (
           <>
@@ -245,7 +243,7 @@ const StandingsScreen: React.FC = () => {
               <Text style={[globalStyles.caption, styles.headerPoints]}>B</Text>
             </View>
 
-            {standings?.map((item, index) => renderStandingItem(item, index))}
+            {standings?.map((item) => renderStandingItem(item))}
           </>
         )}
       </ScrollView>
@@ -265,7 +263,7 @@ const StandingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   header: {
     height: 200,
@@ -281,7 +279,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay40,
     padding: 20,
   },
   headerBottom: {
@@ -294,7 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     position: 'absolute',
     top: '50%',
@@ -307,20 +305,20 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerTeam: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: 'bold',
   },
   headerSeason: {
-    color: '#FFFFFF',
+    color: colors.white,
     opacity: 0.8,
   },
   filterButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.overlayWhite20,
     padding: 8,
     borderRadius: 6,
   },
   filterButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   scrollView: {
     flex: 1,
@@ -328,52 +326,52 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.gray500,
   },
   headerPosition: {
     flex: 1,
     textAlign: 'center',
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
   },
   headerTeamTable: {
     flex: 3,
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
   },
   headerZapasy: {
     flex: 0.5,
     textAlign: 'center',
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
   },
   headerGoals: {
     flex: 1,
     textAlign: 'center',
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
   },
   headerPoints: {
     flex: 1,
     textAlign: 'center',
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
   },
   standingRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.gray400,
     alignItems: 'center',
   },
   fczlicinRow: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.infoLight,
   },
   positionContainer: {
     flex: 1,
@@ -381,24 +379,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   position: {
-    color: '#000',
+    color: colors.black,
     fontWeight: 'bold',
   },
   teamName: {
     flex: 3,
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 13,
   },
   stats: {
     flex: 0.5,
     textAlign: 'center',
-    color: '#666666',
+    color: colors.gray700,
   },
   goals: {
     flex: 1,
     textAlign: 'center',
-    color: '#666666',
+    color: colors.gray700,
   },
   pointsContainer: {
     flex: 1,
@@ -406,14 +404,8 @@ const styles = StyleSheet.create({
   },
   points: {
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 13,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
   },
 });
 

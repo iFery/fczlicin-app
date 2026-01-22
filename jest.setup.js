@@ -56,7 +56,11 @@ jest.mock('./src/services/notifications', () => ({
 }));
 
 // Mock React Native components
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+try {
+  jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+} catch (e) {
+  // Module may not exist in test environment
+}
 
 // Silence console warnings in tests
 global.console = {

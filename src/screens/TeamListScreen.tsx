@@ -8,14 +8,18 @@ import {
   Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { usePlayers, useTeams } from '../hooks/useFootballData';
 import { LoadingSpinner, ErrorView, FilterModal } from '../components';
 import { useTheme } from '../theme/ThemeProvider';
+import type { RootStackParamList } from '../navigation/linking';
+import type { Player, PlayersResponse } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
 
 import headerBg from 'assets/header-team-bg.png';
 
 const TeamListScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [selectedTeam, setSelectedTeam] = useState<string>('1'); // Default: Muži A
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const { globalStyles } = useTheme();
@@ -51,11 +55,11 @@ const TeamListScreen: React.FC = () => {
     return <ErrorView error={new Error(error)} onRetry={refetch} />;
   }
 
-  const renderPlayerCard = (player: any, _position: string) => (
+  const renderPlayerCard = (player: Player) => (
     <TouchableOpacity 
       key={player.id} 
       style={styles.playerCard}
-      onPress={() => (navigation as any).navigate('PlayerDetail', { 
+      onPress={() => navigation.navigate('PlayerDetail', { 
         playerId: player.id.toString(),
         teamId: selectedTeam 
       })}
@@ -72,11 +76,11 @@ const TeamListScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const renderPositionSection = (title: string, playerData: any[], position: string) => (
+  const renderPositionSection = (title: string, playerData: PlayersResponse[keyof PlayersResponse]) => (
     <View style={styles.section}>
       <Text style={[globalStyles.heading, styles.sectionTitle]}>{title}</Text>
       <View style={styles.playerGrid}>
-        {playerData.map(player => renderPlayerCard(player, position))}
+        {playerData.map(player => renderPlayerCard(player))}
       </View>
     </View>
   );
@@ -108,10 +112,10 @@ const TeamListScreen: React.FC = () => {
           <LoadingSpinner inline size="large" />
         ) : (
           <>
-            {players?.goalkeepers && players.goalkeepers.length > 0 && renderPositionSection('Brankáři', players.goalkeepers, 'goalkeepers')}
-            {players?.defenders && players.defenders.length > 0 && renderPositionSection('Obránci', players.defenders, 'defenders')}
-            {players?.midfielders && players.midfielders.length > 0 && renderPositionSection('Záložníci', players.midfielders, 'midfielders')}
-            {players?.forwards && players.forwards.length > 0 && renderPositionSection('Útočníci', players.forwards, 'forwards')}
+            {players?.goalkeepers && players.goalkeepers.length > 0 && renderPositionSection('Brankáři', players.goalkeepers)}
+            {players?.defenders && players.defenders.length > 0 && renderPositionSection('Obránci', players.defenders)}
+            {players?.midfielders && players.midfielders.length > 0 && renderPositionSection('Záložníci', players.midfielders)}
+            {players?.forwards && players.forwards.length > 0 && renderPositionSection('Útočníci', players.forwards)}
           </>
         )}
       </ScrollView>
@@ -131,7 +135,7 @@ const TeamListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   header: {
     height: 200,
@@ -147,11 +151,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: colors.overlay40,
     padding: 20,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     position: 'absolute',
     top: '50%',
@@ -173,16 +177,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerTeam: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: 'bold',
   },
   filterButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.overlayWhite20,
     padding: 8,
     borderRadius: 6,
   },
   filterButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   content: {
     flex: 1,
@@ -193,7 +197,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginBottom: 16,
   },
   playerGrid: {
@@ -202,7 +206,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   playerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -210,7 +214,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -221,21 +225,11 @@ const styles = StyleSheet.create({
   },
   playerName: {
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
     marginBottom: 4,
   },
   playerAge: {
-    color: '#666666',
-  },
-  positionBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  positionText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 10,
+    color: colors.gray700,
   },
 });
 

@@ -3,7 +3,6 @@
  * Catches "No Firebase App" errors and attempts to fix them
  */
 
-import firebase from '@react-native-firebase/app';
 import { ensureFirebaseInitialized, isFirebaseReady } from '../services/firebase';
 
 /**
@@ -29,8 +28,8 @@ export async function withFirebaseErrorHandling<T>(
       }
 
       return await fn();
-    } catch (error: any) {
-      const errorMessage = error?.message || '';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       
       // Check if it's the "No Firebase App" error
       if (
@@ -61,8 +60,8 @@ export async function withFirebaseErrorHandling<T>(
 /**
  * Checks if an error is a Firebase initialization error
  */
-export function isFirebaseInitError(error: any): boolean {
-  const errorMessage = error?.message || '';
+export function isFirebaseInitError(error: unknown): boolean {
+  const errorMessage = error instanceof Error ? error.message : String(error);
   return (
     errorMessage.includes('No Firebase App') ||
     errorMessage.includes('has been created') ||

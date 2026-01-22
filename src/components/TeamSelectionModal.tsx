@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +16,7 @@ import { useTeams } from '../hooks/useFootballData';
 import type { Team } from '../api/footballEndpoints';
 import { invalidateCache } from '../utils/cacheManager';
 import { CACHE_KEY_PATTERNS } from '../config/cacheConfig';
+import { colors } from '../theme/colors';
 
 const { height } = Dimensions.get('window');
 
@@ -116,7 +116,7 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
       >
         <View style={styles.teamItemContent}>
           <View style={[styles.checkbox, isSelected && styles.checkboxSelected, { marginRight: 12 }]}>
-            {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+            {isSelected && <Ionicons name="checkmark" size={16} color={colors.white} />}
           </View>
           <Text style={[globalStyles.text, styles.teamName, isSelected && styles.teamNameSelected]}>
             {team.name}
@@ -158,21 +158,21 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
               style={styles.closeButton} 
               activeOpacity={0.7}
             >
-              <Ionicons name="close" size={24} color="#333333" />
+              <Ionicons name="close" size={24} color={colors.gray900} />
             </TouchableOpacity>
           </View>
 
           {/* Content */}
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#014fa1" />
+              <ActivityIndicator size="large" color={colors.brandBlue} />
               <Text style={[globalStyles.caption, styles.loadingText]}>
                 Načítání týmů...
               </Text>
             </View>
           ) : error ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="alert-circle-outline" size={48} color="#FF4444" />
+              <Ionicons name="alert-circle-outline" size={48} color={colors.errorLight} />
               <Text style={[globalStyles.text, styles.emptyText]}>
                 Chyba při načítání týmů
               </Text>
@@ -184,7 +184,7 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
                 onPress={() => refetch()}
                 activeOpacity={0.7}
               >
-                <Ionicons name="refresh" size={18} color="#014fa1" style={{ marginRight: 8 }} />
+                <Ionicons name="refresh" size={18} color={colors.brandBlue} style={{ marginRight: 8 }} />
                 <Text style={styles.retryButtonText}>Zkusit znovu</Text>
               </TouchableOpacity>
             </View>
@@ -204,7 +204,7 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
                         <Ionicons 
                           name={category === 'seniors' ? 'people' : 'people-outline'} 
                           size={18} 
-                          color="#014fa1" 
+                          color={colors.brandBlue} 
                         />
                       </View>
                       <Text style={[globalStyles.heading, styles.categoryTitle, { marginLeft: 10 }]}>
@@ -218,7 +218,7 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
                 ))
               ) : (
                 <View style={styles.emptyContainer}>
-                  <Ionicons name="football-outline" size={48} color="#666" />
+                  <Ionicons name="football-outline" size={48} color={colors.gray700} />
                   <Text style={[globalStyles.text, styles.emptyText]}>
                     Žádné týmy k dispozici
                   </Text>
@@ -230,7 +230,7 @@ const TeamSelectionModal: React.FC<TeamSelectionModalProps> = ({
                     onPress={() => refetch()}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="refresh" size={18} color="#014fa1" style={{ marginRight: 8 }} />
+                    <Ionicons name="refresh" size={18} color={colors.brandBlue} style={{ marginRight: 8 }} />
                     <Text style={styles.retryButtonText}>Zkusit znovu</Text>
                   </TouchableOpacity>
                 </View>
@@ -291,16 +291,16 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: colors.overlay60,
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: height * 0.9,
     flexDirection: 'column',
     flexShrink: 1,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.gray500,
     flexShrink: 0,
   },
   headerContent: {
@@ -323,12 +323,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 24,
     fontWeight: '700',
   },
   badge: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     borderRadius: 12,
     minWidth: 24,
     height: 24,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Rajdhani-SemiBold',
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 16,
   },
   categorySection: {
@@ -381,12 +381,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(1, 79, 161, 0.1)',
+    backgroundColor: colors.brandBlueLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   categoryTitle: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -397,17 +397,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: colors.transparent,
   },
   teamItemSpacing: {
     marginBottom: 8,
   },
   teamItemSelected: {
-    backgroundColor: 'rgba(1, 79, 161, 0.08)',
-    borderColor: '#014fa1',
+    backgroundColor: colors.brandBlueSubtle,
+    borderColor: colors.brandBlue,
   },
   teamItemContent: {
     flexDirection: 'row',
@@ -419,23 +419,23 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#CCCCCC',
-    backgroundColor: 'transparent',
+    borderColor: colors.gray450,
+    backgroundColor: colors.transparent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: '#014fa1',
-    borderColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
+    borderColor: colors.brandBlue,
   },
   teamName: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 16,
     flex: 1,
   },
   teamNameSelected: {
     fontWeight: '600',
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   emptyContainer: {
     padding: 60,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: {
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 16,
     textAlign: 'center',
   },
@@ -454,28 +454,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    backgroundColor: 'rgba(1, 79, 161, 0.1)',
+    backgroundColor: colors.brandBlueLight,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#014fa1',
+    borderColor: colors.brandBlue,
   },
   retryButtonText: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 14,
     fontWeight: '600',
   },
   footer: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    backgroundColor: '#F9F9F9',
+    borderTopColor: colors.gray500,
+    backgroundColor: colors.gray100,
     flexShrink: 0,
   },
   footerInfo: {
     marginBottom: 16,
   },
   footerText: {
-    color: '#666666',
+    color: colors.gray700,
     textAlign: 'center',
     fontSize: 14,
   },
@@ -491,28 +491,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.gray500,
     marginRight: 12,
   },
   cancelButtonText: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
   },
   saveButtonDisabled: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.gray500,
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
   saveButtonTextDisabled: {
-    color: '#999999',
+    color: colors.gray600,
   },
 });
 

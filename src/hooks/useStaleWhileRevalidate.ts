@@ -108,7 +108,7 @@ export function useStaleWhileRevalidate<T>({
         throw err;
       }
     },
-    [cacheKey, errorMessage, ttlToUse]
+    [cacheKey, errorMessage]
   );
   
   // Background refresh (non-blocking)

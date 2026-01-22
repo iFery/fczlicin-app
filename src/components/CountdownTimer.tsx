@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '../theme/colors';
 
 interface CountdownTime {
   days: number;
@@ -88,11 +89,11 @@ const styles = StyleSheet.create({
   },
   number: {
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 18,
   },
   label: {
-    color: '#666666',
+    color: colors.gray700,
     fontSize: 10,
     marginTop: 2,
   },

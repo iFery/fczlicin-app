@@ -6,10 +6,10 @@
 import React from 'react';
 import { render, waitFor, screen, fireEvent } from '@testing-library/react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { Pressable, Text, View } from 'react-native';
 import { preloadAllData } from '../../services/preloadService';
 import { hasAnyValidCache, getOldestCacheAge } from '../../utils/cacheManager';
 import { BootstrapProvider, useBootstrap } from '../BootstrapProvider';
-import { OfflineBlockedScreen } from '../../screens/OfflineBlockedScreen';
 import AppNavigator from '../../navigation/AppNavigator';
 
 // Mock dependencies
@@ -29,9 +29,11 @@ const mockedGetOldestCacheAge = getOldestCacheAge as jest.MockedFunction<typeof 
 
 // Mock AppNavigator to return a simple test component
 (AppNavigator as jest.Mock).mockImplementation(() => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return React.createElement(View, { testID: 'app-navigator' }, 'App Content');
+  return (
+    <View testID="app-navigator">
+      <Text>App Content</Text>
+    </View>
+  );
 });
 
 describe('BootstrapProvider - Integration Tests', () => {
@@ -41,20 +43,28 @@ describe('BootstrapProvider - Integration Tests', () => {
 
   const TestApp = () => {
     const { state } = useBootstrap();
-    
-    if (state === 'offline-blocked') {
-      return <OfflineBlockedScreen />;
-    }
-    
+
     if (state === 'ready-online' || state === 'ready-offline') {
       return <AppNavigator />;
     }
     
     return null;
   };
+  const TestAppWithRetry = () => {
+    const { state, retry } = useBootstrap();
 
-  describe('Offline-blocked screen rendering', () => {
-    it('should render OfflineBlockedScreen when state is offline-blocked', async () => {
+    return (
+      <>
+        {(state === 'ready-online' || state === 'ready-offline') && <AppNavigator />}
+        <Pressable onPress={retry}>
+          <Text>Retry</Text>
+        </Pressable>
+      </>
+    );
+  };
+
+  describe('Offline state renders app content', () => {
+    it('should render app content when offline even without cache', async () => {
       // Setup: offline, no cache
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: false,
@@ -68,12 +78,11 @@ describe('BootstrapProvider - Integration Tests', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Jste offline')).toBeTruthy();
+        expect(screen.getByTestId('app-navigator')).toBeTruthy();
       }, { timeout: 3000 });
 
-      // Verify retry button exists
-      expect(screen.getByText('Zkusit znovu')).toBeTruthy();
-      expect(screen.getByText('Otevřít nastavení připojení')).toBeTruthy();
+      // Offline-blocked screen should not be shown
+      expect(screen.queryByText('Jste offline')).toBeNull();
     });
   });
 
@@ -167,44 +176,36 @@ describe('BootstrapProvider - Integration Tests', () => {
   describe('Retry functionality in UI', () => {
     it('should retry bootstrap when retry button is pressed', async () => {
       // Setup: offline, no cache
-      mockedNetInfo.fetch.mockResolvedValue({
-        isInternetReachable: false,
-      } as any);
-      mockedHasAnyValidCache.mockResolvedValue(false);
-
-      render(
-        <BootstrapProvider>
-          <TestApp />
-        </BootstrapProvider>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText('Jste offline')).toBeTruthy();
+      let fetchCallCount = 0;
+      mockedNetInfo.fetch.mockImplementation(() => {
+        fetchCallCount += 1;
+        return Promise.resolve({
+          isInternetReachable: fetchCallCount === 1 ? false : true,
+        } as any);
       });
-
-      // Clear mocks
-      jest.clearAllMocks();
-
-      // Setup: online, fetch succeeds and creates cache
-      mockedNetInfo.fetch.mockResolvedValue({
-        isInternetReachable: true,
-      } as any);
-      // First call: no cache before fetch, second call: cache exists after fetch
-      mockedHasAnyValidCache
-        .mockResolvedValueOnce(false) // Before fetch - no cache
-        .mockResolvedValueOnce(true); // After fetch - cache created
+      mockedHasAnyValidCache.mockResolvedValue(false);
       mockedPreloadAllData.mockResolvedValue({
         success: true,
         errors: [],
       });
 
-      // Get retry button and press it
-      const retryButton = screen.getByText('Zkusit znovu');
-      fireEvent.press(retryButton);
+      render(
+        <BootstrapProvider>
+          <TestAppWithRetry />
+        </BootstrapProvider>
+      );
 
-      // Wait for transition to app
       await waitFor(() => {
         expect(screen.getByTestId('app-navigator')).toBeTruthy();
+      });
+
+      const initialFetchCalls = mockedNetInfo.fetch.mock.calls.length;
+
+      // Trigger retry by calling bootstrap retry through net change simulation
+      fireEvent.press(screen.getByText('Retry'));
+
+      await waitFor(() => {
+        expect(mockedNetInfo.fetch.mock.calls.length).toBeGreaterThan(initialFetchCalls);
       }, { timeout: 5000 });
 
       // Should no longer show offline screen
@@ -212,4 +213,3 @@ describe('BootstrapProvider - Integration Tests', () => {
     });
   });
 });
-

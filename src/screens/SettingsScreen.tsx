@@ -20,6 +20,7 @@ import { useTeams, useCurrentSeason } from '../hooks/useFootballData';
 import { notificationService } from '../services/notifications';
 import { analyticsService } from '../services/analytics';
 import { footballApi, type Match } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
 
 export default function SettingsScreen() {
   const {
@@ -270,7 +271,7 @@ export default function SettingsScreen() {
           {/* Notifications Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="notifications-outline" size={24} color="#014fa1" />
+              <Ionicons name="notifications-outline" size={24} color={colors.brandBlue} />
               <Text style={[globalStyles.heading, styles.sectionTitle]}>Notifikace</Text>
             </View>
 
@@ -303,7 +304,7 @@ export default function SettingsScreen() {
             <View style={styles.teamNotificationsSection}>
               <View style={styles.subsectionHeader}>
                 <View style={styles.subsectionIconContainer}>
-                  <Ionicons name="football" size={22} color="#014fa1" />
+                  <Ionicons name="football" size={22} color={colors.brandBlue} />
                 </View>
                 <View style={styles.subsectionTitleContainer}>
                   <Text style={[globalStyles.heading, styles.subsectionTitle]}>
@@ -319,7 +320,7 @@ export default function SettingsScreen() {
               <View style={styles.notificationCard}>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardIconContainer}>
-                    <Ionicons name="notifications" size={20} color="#014fa1" />
+                    <Ionicons name="notifications" size={20} color={colors.brandBlue} />
                   </View>
                   <View style={styles.cardHeaderText}>
                     <Text style={[globalStyles.text, styles.cardTitle]}>
@@ -333,9 +334,9 @@ export default function SettingsScreen() {
                       value={pushNotificationsEnabled && isNotificationEnabled}
                       onValueChange={handleTogglePushNotifications}
                       disabled={!isNotificationEnabled}
-                      trackColor={{ false: '#E0E0E0', true: '#014fa1' }}
-                      thumbColor="#FFFFFF"
-                      ios_backgroundColor="#E0E0E0"
+                      trackColor={{ false: colors.gray500, true: colors.brandBlue }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.gray500}
                     />
                 </View>
               </View>
@@ -355,7 +356,7 @@ export default function SettingsScreen() {
                     <Ionicons 
                       name="people" 
                       size={20} 
-                      color={isTeamNotificationsEnabled ? "#014fa1" : "#999999"} 
+                      color={isTeamNotificationsEnabled ? colors.brandBlue : colors.gray600} 
                     />
                   </View>
                   <View style={styles.cardHeaderText}>
@@ -411,7 +412,7 @@ export default function SettingsScreen() {
                   <Ionicons 
                     name="chevron-forward" 
                     size={20} 
-                    color={isTeamNotificationsEnabled ? "#666666" : "#999999"} 
+                    color={isTeamNotificationsEnabled ? colors.gray700 : colors.gray600} 
                   />
                 </View>
               </TouchableOpacity>
@@ -428,7 +429,7 @@ export default function SettingsScreen() {
                 <View style={styles.cardSettingRow}>
                   <View style={styles.cardSettingContent}>
                     <View style={styles.cardSettingIconContainer}>
-                      <Ionicons name="time-outline" size={18} color="#014fa1" />
+                      <Ionicons name="time-outline" size={18} color={colors.brandBlue} />
                     </View>
                     <View style={styles.cardSettingText}>
                       <Text style={[globalStyles.text, styles.cardSettingTitle]}>
@@ -443,9 +444,9 @@ export default function SettingsScreen() {
                       value={matchStartReminderEnabled && isTeamNotificationsEnabled}
                       onValueChange={handleToggleMatchStartReminder}
                       disabled={!isTeamNotificationsEnabled}
-                      trackColor={{ false: '#E0E0E0', true: '#014fa1' }}
-                      thumbColor="#FFFFFF"
-                      ios_backgroundColor="#E0E0E0"
+                      trackColor={{ false: colors.gray500, true: colors.brandBlue }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.gray500}
                     />
                 </View>
 
@@ -455,7 +456,7 @@ export default function SettingsScreen() {
                 <View style={styles.cardSettingRow}>
                   <View style={styles.cardSettingContent}>
                     <View style={styles.cardSettingIconContainer}>
-                      <Ionicons name="trophy-outline" size={18} color="#014fa1" />
+                      <Ionicons name="trophy-outline" size={18} color={colors.brandBlue} />
                     </View>
                     <View style={styles.cardSettingText}>
                       <Text style={[globalStyles.text, styles.cardSettingTitle]}>
@@ -470,9 +471,9 @@ export default function SettingsScreen() {
                       value={matchResultNotificationEnabled && isTeamNotificationsEnabled}
                       onValueChange={handleToggleMatchResultNotification}
                       disabled={!isTeamNotificationsEnabled}
-                      trackColor={{ false: '#E0E0E0', true: '#014fa1' }}
-                      thumbColor="#FFFFFF"
-                      ios_backgroundColor="#E0E0E0"
+                      trackColor={{ false: colors.gray500, true: colors.brandBlue }}
+                      thumbColor={colors.white}
+                      ios_backgroundColor={colors.gray500}
                     />
                 </View>
               </View>
@@ -495,7 +496,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollView: {
     flex: 1,
@@ -514,14 +515,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 8,
     borderBottomWidth: 2,
-    borderBottomColor: '#014fa1',
+    borderBottomColor: colors.brandBlue,
   },
   sectionTitle: {
-    color: '#333333',
+    color: colors.gray900,
     marginLeft: 8,
   },
   statusRow: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
     padding: 16,
     marginBottom: 12,
     borderRadius: 12,
@@ -529,7 +530,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.gray500,
   },
   statusContent: {
     flexDirection: 'row',
@@ -544,44 +545,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusText: {
-    color: '#333333',
+    color: colors.gray900,
   },
   settingsButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   settingsButtonText: {
-    color: '#FFFFFF',
-  },
-  settingRow: {
-    backgroundColor: '#F5F5F5',
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  settingContent: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingTitle: {
-    color: '#333333',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    color: '#666666',
+    color: colors.white,
   },
   teamNotificationsSection: {
     marginTop: 24,
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: colors.gray500,
   },
   subsectionHeader: {
     flexDirection: 'row',
@@ -593,7 +572,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(1, 79, 161, 0.1)',
+    backgroundColor: colors.brandBlueLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
@@ -602,23 +581,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   subsectionTitle: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 4,
   },
   subsectionSubtitle: {
-    color: '#666666',
+    color: colors.gray700,
     fontSize: 13,
   },
   notificationCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
+    borderColor: colors.gray500,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -636,7 +615,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(1, 79, 161, 0.1)',
+    backgroundColor: colors.brandBlueLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
@@ -652,23 +631,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   cardTitle: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 16,
     fontWeight: '600',
   },
   cardTitleDisabled: {
-    color: '#999999',
+    color: colors.gray600,
   },
   cardDescription: {
-    color: '#666666',
+    color: colors.gray700,
     fontSize: 13,
     lineHeight: 18,
   },
   cardDescriptionDisabled: {
-    color: '#999999',
+    color: colors.gray600,
   },
   badge: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -677,7 +656,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Rajdhani-SemiBold',
@@ -689,29 +668,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   teamChip: {
-    backgroundColor: 'rgba(1, 79, 161, 0.2)',
+    backgroundColor: colors.brandBlueLightStrong,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(1, 79, 161, 0.3)',
+    borderColor: colors.brandBlueBorder,
   },
   teamChipText: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Rajdhani-Medium',
   },
   teamChipMore: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.gray500,
   },
   teamChipMoreText: {
-    color: '#666666',
+    color: colors.gray700,
     fontSize: 13,
     fontWeight: '600',
     fontFamily: 'Rajdhani-Medium',
@@ -720,10 +699,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.gray500,
   },
   cardSectionTitle: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -744,7 +723,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(1, 79, 161, 0.08)',
+    backgroundColor: colors.brandBlueSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
@@ -754,22 +733,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   cardSettingTitle: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 15,
     fontWeight: '500',
   },
   cardSettingDescription: {
-    color: '#666666',
+    color: colors.gray700,
     fontSize: 13,
     lineHeight: 18,
   },
   cardDivider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.gray500,
     marginVertical: 16,
     marginLeft: 44,
-  },
-  settingRowDisabled: {
-    opacity: 0.5,
   },
 });

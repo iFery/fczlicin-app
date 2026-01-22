@@ -3,42 +3,50 @@
  * Displays full news article with HTML content
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   Image,
   StyleSheet,
   StatusBar,
   ScrollView,
   ActivityIndicator,
-  Dimensions,
-  Linking,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/linking';
 import { newsApi, type ApiError } from '../api';
 import { loadFromCache } from '../utils/cacheManager';
 import { useTheme } from '../theme/ThemeProvider';
 import type { News } from '../types';
+import { colors } from '../theme/colors';
+import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
 
 type NewsDetailScreenRouteProp = RouteProp<RootStackParamList, 'NewsDetail'>;
-type NewsDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CACHE_KEY = 'news';
 
 export default function NewsDetailScreen() {
   const route = useRoute<NewsDetailScreenRouteProp>();
-  const navigation = useNavigation<NewsDetailScreenNavigationProp>();
-  const { newsId } = route.params;
+  const { newsId, source } = route.params;
   const [news, setNews] = useState<News | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { globalStyles } = useTheme();
+  const newsRef = useRef<News | null>(null);
+
+  useEffect(() => {
+    newsRef.current = news;
+  }, [news]);
+
+  useEffect(() => {
+    analyticsService.logEvent(AnalyticsEvent.NEWS_OPEN, {
+      news_id: newsId,
+      source: source || 'unknown',
+    });
+  }, [newsId, source]);
 
   useEffect(() => {
     let isMounted = true;
@@ -81,7 +89,7 @@ export default function NewsDetailScreen() {
           }
 
           // If API fails but we have cached data, use it
-          if (!news && isMounted) {
+          if (!newsRef.current && isMounted) {
             throw apiError;
           }
         }
@@ -120,12 +128,6 @@ export default function NewsDetailScreen() {
     } catch {
       return dateString;
     }
-  };
-
-  const handleLinkPress = (url: string) => {
-    Linking.openURL(url).catch((err) => {
-      console.warn('Nešlo otevřít odkaz:', url, err);
-    });
   };
 
   /**
@@ -218,7 +220,7 @@ export default function NewsDetailScreen() {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" />
-        <ActivityIndicator size="large" color="#014fa1" />
+        <ActivityIndicator size="large" color={colors.brandBlue} />
       </View>
     );
   }
@@ -254,13 +256,13 @@ export default function NewsDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollView: {
     flex: 1,
@@ -277,26 +279,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   newsTitle: {
-    color: '#333333',
+    color: colors.gray900,
     marginBottom: 8,
   },
   newsDate: {
-    color: '#666666',
+    color: colors.gray700,
     marginBottom: 20,
   },
   htmlContent: {
     marginTop: 8,
   },
   htmlParagraph: {
-    color: '#333333',
+    color: colors.gray900,
     lineHeight: 24,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC3545',
+    color: colors.error,
     textAlign: 'center',
     marginVertical: 20,
   },
 });
-
-

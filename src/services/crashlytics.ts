@@ -11,7 +11,7 @@ class CrashlyticsService {
         return;
       }
       crashlytics().setCrashlyticsCollectionEnabled(enabled);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [crashlytics.ts] Error setting Crashlytics enabled:', e);
     }
   }
@@ -25,7 +25,7 @@ class CrashlyticsService {
         return;
       }
       crashlytics().recordError(error, jsErrorName);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [crashlytics.ts] Error recording to Crashlytics:', e);
     }
   }
@@ -106,4 +106,3 @@ export const crashlyticsService = new Proxy({} as CrashlyticsService, {
     return value;
   }
 });
-

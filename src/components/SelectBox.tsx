@@ -9,6 +9,7 @@ import {
   Dimensions 
 } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { colors } from '../theme/colors';
 
 const { height } = Dimensions.get('window');
 
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: 8,
-    color: '#333333',
+    color: colors.gray900,
     fontWeight: 'bold',
   },
   selectButton: {
@@ -119,35 +120,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.gray500,
     borderRadius: 8,
     minHeight: 48,
   },
   selectButtonText: {
-    color: '#333333',
+    color: colors.gray900,
     flex: 1,
   },
   placeholderText: {
-    color: '#999999',
+    color: colors.gray600,
   },
   arrow: {
-    color: '#666666',
+    color: colors.gray700,
     fontSize: 12,
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay50,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     maxHeight: height * 0.6,
     width: '80%',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -163,21 +164,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.gray400,
   },
   selectedOption: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
   },
   optionText: {
-    color: '#333333',
+    color: colors.gray900,
     flex: 1,
   },
   selectedOptionText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: 'bold',
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: 'bold',
   },
 });

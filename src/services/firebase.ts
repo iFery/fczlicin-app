@@ -3,9 +3,7 @@ import analytics from '@react-native-firebase/analytics';
 import messaging from '@react-native-firebase/messaging';
 import remoteConfig from '@react-native-firebase/remote-config';
 import crashlytics from '@react-native-firebase/crashlytics';
-import { Platform } from 'react-native';
 
-let isInitialized = false;
 let initializationPromise: Promise<void> | null = null;
 
 /**
@@ -23,12 +21,11 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
     const apps = firebase.apps;
     
     if (apps && apps.length > 0) {
-      isInitialized = true;
       return;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Pokud firebase.apps vyhodí chybu (např. "No Firebase App"), pokračujeme s inicializací
-    const errorMessage = error?.message || '';
+    const errorMessage = error instanceof Error ? error.message : String(error);
     
     if (!errorMessage.includes('No Firebase App') && !errorMessage.includes('has been created')) {
       console.warn('⚠️ [firebase.ts] Unexpected error checking firebase.apps:', error);
@@ -54,9 +51,9 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
       const safeGetAppsLength = (): number => {
         try {
           return firebase.apps.length;
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Pokud firebase.apps vyhodí chybu "No Firebase App", Firebase není inicializován
-          const errorMessage = error?.message || '';
+          const errorMessage = error instanceof Error ? error.message : String(error);
           
           if (!errorMessage.includes('No Firebase App') && !errorMessage.includes('has been created')) {
             console.warn('⚠️ [firebase.ts] Unexpected error checking firebase.apps:', error);
@@ -96,20 +93,20 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
           // Pokud to nefunguje, zkusíme získat default app (což může vyhodit chybu)
           // firebase.app() vyhodí chybu, pokud není inicializován, ale zkusíme to
           try {
-            const app = firebase.app();
+            firebase.app();
             // Pokud jsme sem došli, Firebase je inicializován
-            isInitialized = true;
             return;
-          } catch (appError: any) {
+          } catch (appError: unknown) {
             // firebase.app() vyhodí chybu, pokud není inicializován
             console.error('❌ [firebase.ts] Firebase app() failed - this means Firebase is NOT initialized');
-            console.error('❌ [firebase.ts] Error details:', appError?.message);
+            const appErrorMessage = appError instanceof Error ? appError.message : String(appError);
+            console.error('❌ [firebase.ts] Error details:', appErrorMessage);
             console.error('❌ [firebase.ts] Please check google-services.json configuration');
             
             // Nehážeme error - aplikace by měla pokračovat i bez Firebase
             return; // Vrátíme se bez erroru, aplikace může pokračovat
           }
-        } catch (initError: any) {
+        } catch (initError: unknown) {
           console.error('❌ [firebase.ts] Firebase explicit initialization failed:', initError);
           // Nehážeme error - aplikace by měla pokračovat i bez Firebase
           return;
@@ -131,11 +128,11 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
         return; // Vrátíme se bez erroru
       }
 
-      isInitialized = true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ [firebase.ts] Error ensuring Firebase initialization:', error);
-      console.error('❌ [firebase.ts] Error details:', error?.message, error?.stack?.substring(0, 300));
-      isInitialized = false;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('❌ [firebase.ts] Error details:', errorMessage, errorStack?.substring(0, 300));
       initializationPromise = null;
       // Nehážeme error - aplikace by měla pokračovat i bez Firebase
       // throw error;
@@ -214,9 +211,9 @@ export const isFirebaseReady = (): boolean => {
     const apps = firebase.apps;
     const length = apps?.length || 0;
     return length > 0;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Pokud kontrola vyhodí chybu (např. "No Firebase App"), Firebase není připraven
-    const errorMessage = error?.message || '';
+    const errorMessage = error instanceof Error ? error.message : String(error);
     
     if (!errorMessage.includes('No Firebase App') && !errorMessage.includes('has been created')) {
       // Pro jiné chyby logujeme varování
@@ -270,8 +267,8 @@ export const safeMessagingCall = async <T>(
       }
       
       return await fn(messaging());
-    } catch (error: any) {
-      const errorMessage = error?.message || '';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       
       // Check if it's the "No Firebase App" error
       if (
@@ -294,4 +291,3 @@ export const safeMessagingCall = async <T>(
   
   return null;
 };
-

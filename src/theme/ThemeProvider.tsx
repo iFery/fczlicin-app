@@ -1,5 +1,7 @@
+/* eslint-disable react-native/no-unused-styles */
 import React, { createContext, useContext, ReactNode } from 'react';
-import { StyleSheet, TextStyle, ViewStyle } from 'react-native';
+import { StyleSheet, TextStyle } from 'react-native';
+import { colors } from './colors';
 
 export const typography = {
   fontFamily: {
@@ -32,32 +34,32 @@ const globalStyles: GlobalStyles = StyleSheet.create({
   text: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.fontSize.md,
-    color: '#333333',
+    color: colors.gray900,
   },
   heading: {
     fontFamily: typography.fontFamily.bold,
     fontSize: typography.fontSize.lg,
-    color: '#333333',
+    color: colors.gray900,
   },
   title: {
     fontFamily: typography.fontFamily.bold,
     fontSize: typography.fontSize.xl,
-    color: '#333333',
+    color: colors.gray900,
   },
   subtitle: {
     fontFamily: typography.fontFamily.medium,
     fontSize: typography.fontSize.md,
-    color: '#666666',
+    color: colors.gray700,
   },
   caption: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.fontSize.sm,
-    color: '#666666',
+    color: colors.gray700,
   },
   button: {
     fontFamily: typography.fontFamily.medium,
     fontSize: typography.fontSize.md,
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });
 

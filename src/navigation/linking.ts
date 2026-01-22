@@ -7,8 +7,8 @@ export type RootStackParamList = {
   FavoritesMain: undefined;
   InfoMain: undefined;
   PlayerDetail: { playerId: string; teamId: string };
-  NewsDetail: { newsId: string; newsTitle: string };
-  MatchDetail: { matchId: string };
+  NewsDetail: { newsId: string; newsTitle: string; source?: string };
+  MatchDetail: { matchId: string; teamName?: string; source?: string };
   Settings: undefined;
   News: undefined;
   Debug: undefined;

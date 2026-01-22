@@ -4,7 +4,6 @@
  * Prevents race conditions when deep links/notifications arrive before navigation container is initialized
  */
 
-import { NavigationAction } from '@react-navigation/native';
 import { navigationRef } from './navigationRef';
 import type { RootStackParamList } from './linking';
 
@@ -66,10 +65,14 @@ class NavigationQueue {
     }
 
     try {
+      const navigate = navigationRef.current.navigate as unknown as (
+        route: keyof RootStackParamList,
+        routeParams?: RootStackParamList[keyof RootStackParamList]
+      ) => void;
       if (params !== undefined) {
-        (navigationRef.current as any).navigate(screen, params);
+        navigate(screen, params);
       } else {
-        (navigationRef.current as any).navigate(screen);
+        navigate(screen);
       }
     } catch (error) {
       console.error('[NavigationQueue] Navigation error:', error);
@@ -92,5 +95,3 @@ class NavigationQueue {
 }
 
 export const navigationQueue = new NavigationQueue();
-
-

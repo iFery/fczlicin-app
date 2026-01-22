@@ -20,8 +20,8 @@ module.exports = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   testEnvironment: 'node',
+  watchman: false,
 };
-
 
 
 

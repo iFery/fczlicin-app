@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -28,6 +28,7 @@ import {
 import { useNews } from '../hooks/useNews';
 import { useTheme } from '../theme/ThemeProvider';
 import type { News } from '../types';
+import { colors } from '../theme/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -51,7 +52,7 @@ export default function HomeScreen() {
   const { news, loading: newsLoading, error: newsError } = useNews();
   
   // Get first 3-5 news items for carousel
-  const displayNews = news?.slice(0, 5) || [];
+  const displayNews = useMemo(() => news?.slice(0, 5) || [], [news]);
   
   // Default team and season
   const defaultTeam = teams?.[0]?.id || 1;
@@ -59,7 +60,7 @@ export default function HomeScreen() {
   
   // Fetch data
   const { data: upcomingMatches, loading: matchesLoading, error: matchesError, refetch: refetchMatches } = useMatchCalendar(defaultTeam, defaultSeason);
-  const { data: recentMatches, refetch: refetchResults } = useMatchResults(defaultTeam, defaultSeason);
+  const { data: recentMatches } = useMatchResults(defaultTeam, defaultSeason);
   const { data: standings } = useStandings(defaultTeam, defaultSeason);
 
   // Track first render (mount) of HomeScreen
@@ -121,6 +122,7 @@ export default function HomeScreen() {
       navigation.navigate('NewsDetail', {
         newsId: newsItem.id,
         newsTitle: newsItem.title,
+        source: 'home',
       });
     };
 
@@ -170,7 +172,7 @@ export default function HomeScreen() {
                   key={index}
                   style={[
                     styles.dot,
-                    { backgroundColor: index === activeSlide ? '#014fa1' : 'rgba(255,255,255,0.5)' }
+                    { backgroundColor: index === activeSlide ? colors.brandBlue : colors.overlayWhite50 }
                   ]}
                 />
               ))}
@@ -182,33 +184,39 @@ export default function HomeScreen() {
   };
 
   const renderQuickActions = () => {
-    const actions = [
+    const actions: Array<{
+      id: string;
+      title: string;
+      icon: keyof typeof Ionicons.glyphMap;
+      color: string;
+      onPress: () => void;
+    }> = [
       {
         id: 'matches',
         title: 'Zápasy',
         icon: 'football',
-        color: '#014fa1',
+        color: colors.brandBlue,
         onPress: () => navigation.navigate('Matches'),
       },
       {
         id: 'standings',
         title: 'Tabulka',
         icon: 'trophy',
-        color: '#FFA500',
+        color: colors.warning,
         onPress: () => navigation.navigate('Artists'),
       },
       {
         id: 'team',
         title: 'Tým',
         icon: 'people',
-        color: '#28A745',
+        color: colors.success,
         onPress: () => navigation.navigate('Favorites'),
       },
       {
         id: 'news',
         title: 'Novinky',
         icon: 'newspaper',
-        color: '#DC3545',
+        color: colors.error,
         onPress: () => navigation.navigate('News'),
       },
     ];
@@ -225,7 +233,7 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}15` }]}>
-                <Ionicons name={action.icon as any} size={28} color={action.color} />
+                <Ionicons name={action.icon} size={28} color={action.color} />
               </View>
               <Text style={[globalStyles.text, styles.quickActionText]}>{action.title}</Text>
             </TouchableOpacity>
@@ -245,7 +253,7 @@ export default function HomeScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.widgetHeader}>
-          <Ionicons name="trophy" size={20} color="#FFA500" />
+          <Ionicons name="trophy" size={20} color={colors.warning} />
           <Text style={[globalStyles.heading, styles.widgetTitle]}>Aktuální pozice</Text>
         </View>
         <View style={styles.standingsContent}>
@@ -287,7 +295,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.widgetCard}>
         <View style={styles.widgetHeader}>
-          <Ionicons name="time" size={20} color="#014fa1" />
+          <Ionicons name="time" size={20} color={colors.brandBlue} />
           <Text style={[globalStyles.heading, styles.widgetTitle]}>Poslední výsledky</Text>
         </View>
         {lastMatches.map((match, index) => {
@@ -298,24 +306,19 @@ export default function HomeScreen() {
           // Determine result type (win/draw/loss)
           const homeScore = match.homeScore ?? 0;
           const awayScore = match.awayScore ?? 0;
-          let resultType: 'win' | 'draw' | 'loss' = 'draw';
-          let resultColor = '#FFA500'; // Default: orange for draw
+          let resultColor = colors.warning; // Default: orange for draw
           
           if (isHome) {
             if (homeScore > awayScore) {
-              resultType = 'win';
-              resultColor = '#28A745'; // Green for win
+              resultColor = colors.success; // Green for win
             } else if (homeScore < awayScore) {
-              resultType = 'loss';
-              resultColor = '#DC3545'; // Red for loss
+              resultColor = colors.error; // Red for loss
             }
           } else {
             if (awayScore > homeScore) {
-              resultType = 'win';
-              resultColor = '#28A745'; // Green for win
+              resultColor = colors.success; // Green for win
             } else if (awayScore < homeScore) {
-              resultType = 'loss';
-              resultColor = '#DC3545'; // Red for loss
+              resultColor = colors.error; // Red for loss
             }
           }
           
@@ -325,7 +328,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={match.id || index}
               style={styles.resultItem}
-              onPress={() => hasDetail ? navigation.navigate('MatchDetail', { matchId: match.id.toString() }) : null}
+              onPress={() => hasDetail ? navigation.navigate('MatchDetail', { matchId: match.id.toString(), source: 'home_recent' }) : null}
               activeOpacity={0.7}
               disabled={!hasDetail}
             >
@@ -369,7 +372,7 @@ export default function HomeScreen() {
       return (
         <View style={styles.matchCard}>
           <Text style={[globalStyles.heading, styles.matchCardTitle]}>Nejbližší utkání</Text>
-          <ActivityIndicator size="small" color="#014fa1" style={styles.loadingIndicator} />
+          <ActivityIndicator size="small" color={colors.brandBlue} style={styles.loadingIndicator} />
           <Text style={[globalStyles.text, styles.loadingText]}>Načítání...</Text>
         </View>
       );
@@ -409,7 +412,7 @@ export default function HomeScreen() {
     return (
       <TouchableOpacity 
         style={styles.matchCard}
-        onPress={() => hasDetail ? (navigation as any).navigate('MatchDetail', { matchId: nextMatch.id.toString() }) : null}
+        onPress={() => hasDetail ? navigation.navigate('MatchDetail', { matchId: nextMatch.id.toString(), source: 'home_next' }) : null}
         activeOpacity={1}
         disabled={!hasDetail}
       >
@@ -454,7 +457,7 @@ export default function HomeScreen() {
             </View>
             {isHome && (
               <View style={styles.homeBadge}>
-                <Ionicons name="home" size={12} color="#FFFFFF" />
+                <Ionicons name="home" size={12} color={colors.white} />
                 <Text style={[globalStyles.caption, styles.homeBadgeText]}>DOMÁCÍ</Text>
               </View>
             )}
@@ -504,7 +507,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   scrollView: {
     flex: 1,
@@ -530,12 +533,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 24,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay40,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
   categoryBadge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -544,11 +547,11 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   carouselTitle: {
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    color: colors.white,
+    textShadowColor: colors.overlay80,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 4,
     lineHeight: 28,
@@ -568,21 +571,21 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: colors.overlayWhite50,
   },
   matchCard: {
     marginHorizontal: 16,
     marginBottom: 20,
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.gray475,
   },
   matchCardHeader: {
     flexDirection: 'row',
@@ -591,37 +594,37 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   matchCardTitle: {
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   roundBadge: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   roundBadgeText: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   loadingIndicator: {
     marginVertical: 20,
   },
   loadingText: {
     textAlign: 'center',
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 8,
   },
   errorText: {
     textAlign: 'center',
-    color: '#DC3545',
+    color: colors.error,
     marginBottom: 16,
   },
   noMatchesText: {
     textAlign: 'center',
-    color: '#666666',
+    color: colors.gray700,
     paddingVertical: 20,
   },
   retryButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -629,7 +632,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   matchContent: {
     flexDirection: 'row',
@@ -646,12 +649,12 @@ const styles = StyleSheet.create({
   teamLogo: {
     width: 70,
     height: 80,
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
-    shadowColor: '#014fa1',
+    shadowColor: colors.brandBlue,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -663,22 +666,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   awayTeamLogo: {
-    backgroundColor: '#DC3545',
+    backgroundColor: colors.error,
   },
   logoText: {
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   logoYear: {
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.white,
     marginTop: 4,
   },
   teamName: {
     fontWeight: '600',
-    color: '#333333',
+    color: colors.gray900,
     textAlign: 'center',
     flexShrink: 1,
     width: '100%',
@@ -688,18 +691,13 @@ const styles = StyleSheet.create({
     flex: 2,
     paddingHorizontal: 12,
   },
-  roundText: {
-    fontWeight: 'bold',
-    color: '#014fa1',
-    marginBottom: 6,
-  },
   matchDate: {
-    color: '#333333',
+    color: colors.gray900,
     marginBottom: 4,
     fontWeight: '600',
   },
   matchTime: {
-    color: '#666666',
+    color: colors.gray700,
     marginBottom: 12,
   },
   countdownContainer: {
@@ -708,14 +706,14 @@ const styles = StyleSheet.create({
   homeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#28A745',
+    backgroundColor: colors.success,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     marginTop: 8,
   },
   homeBadgeText: {
-    color: '#FFFFFF',
+    color: colors.white,
     marginLeft: 4,
   },
   // Quick Actions
@@ -724,7 +722,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    color: '#333333',
+    color: colors.gray900,
     marginBottom: 16,
   },
   quickActionsGrid: {
@@ -734,18 +732,18 @@ const styles = StyleSheet.create({
   },
   quickActionCard: {
     width: (width - 48) / 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: colors.gray400,
   },
   quickActionIcon: {
     width: 60,
@@ -756,23 +754,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   quickActionText: {
-    color: '#333333',
+    color: colors.gray900,
     textAlign: 'center',
   },
   // Widgets
   widgetCard: {
     marginHorizontal: 16,
     marginBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: colors.gray400,
   },
   widgetHeader: {
     flexDirection: 'row',
@@ -780,7 +778,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   widgetTitle: {
-    color: '#333333',
+    color: colors.gray900,
     marginLeft: 8,
   },
   standingsContent: {
@@ -791,19 +789,19 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FFA500',
+    backgroundColor: colors.warning,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   positionNumber: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   standingsInfo: {
     flex: 1,
   },
   standingsTeam: {
-    color: '#333333',
+    color: colors.gray900,
     marginBottom: 12,
   },
   standingsStats: {
@@ -814,20 +812,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginBottom: 4,
   },
   statLabel: {
-    color: '#666666',
+    color: colors.gray700,
   },
   widgetFooter: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.gray400,
   },
   widgetLink: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -835,7 +833,7 @@ const styles = StyleSheet.create({
   resultItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.gray400,
   },
   resultContent: {
     flexDirection: 'row',
@@ -854,19 +852,19 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   resultTeamName: {
-    color: '#666666',
+    color: colors.gray700,
     textAlign: 'left',
   },
   resultTeamNameBold: {
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
   },
   resultScore: {
     fontWeight: 'bold',
     fontSize: 18,
   },
   resultDate: {
-    color: '#999999',
+    color: colors.gray600,
     textAlign: 'center',
   },
   bottomSpacer: {

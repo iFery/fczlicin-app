@@ -9,10 +9,6 @@ import { remoteConfigService } from './remoteConfig';
 import { crashlyticsService } from './crashlytics';
 import NetInfo from '@react-native-community/netinfo';
 
-// iOS App Store ID - unique per app, same across all regions/languages
-// TODO: Aktualizovat na správné App Store ID pro FC Zličín aplikaci
-const IOS_APP_STORE_ID = '6747171420';
-
 export type UpdateType = 'forced' | 'optional' | 'none';
 
 export interface UpdateInfo {
@@ -199,5 +195,4 @@ export async function openStoreForUpdate(): Promise<void> {
     crashlyticsService.recordError(error instanceof Error ? error : new Error('Failed to open store'));
   }
 }
-
 

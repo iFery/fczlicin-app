@@ -18,7 +18,7 @@ interface UseNotificationPromptResult {
   showPrompt: boolean;
   handleAccept: () => Promise<void>;
   handleDismiss: () => void;
-  onScroll: (event: any) => void;
+  onScroll: (event: { nativeEvent?: { contentOffset?: { y?: number } } }) => void;
 }
 
 /**
@@ -29,7 +29,7 @@ export function useNotificationPrompt(
 ): UseNotificationPromptResult {
   const [showPrompt, setShowPrompt] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
-  const { setPromptShown, shouldShowPrompt, resetDaily } = useNotificationPromptStore();
+  const { setPromptShown, shouldShowPrompt } = useNotificationPromptStore();
   const timeRef = useRef<NodeJS.Timeout | null>(null);
   const scrollDetectedRef = useRef(false);
   const hasShownRef = useRef(false);
@@ -124,7 +124,7 @@ export function useNotificationPrompt(
 
   // Scroll handler
   const onScroll = useCallback(
-    (event: any) => {
+    (event: { nativeEvent?: { contentOffset?: { y?: number } } }) => {
       if (!options.enabled || !options.triggerOnScroll) {
         return;
       }
@@ -179,4 +179,3 @@ export function useNotificationPrompt(
     onScroll,
   };
 }
-

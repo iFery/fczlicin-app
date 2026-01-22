@@ -1,8 +1,8 @@
 import React from 'react';
 import { Platform } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator, type BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { CommonActions } from '@react-navigation/native';
+import { CommonActions, type RouteProp, type NavigationState, type PartialState, type EventArg } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
@@ -18,6 +18,7 @@ import NewsDetailScreen from '../screens/NewsDetailScreen';
 import DebugScreen from '../screens/DebugScreen';
 import NotificationsListScreen from '../screens/NotificationsListScreen';
 import type { RootStackParamList } from './linking';
+import { colors } from '../theme/colors';
 
 export type TabParamList = {
   Home: undefined;
@@ -59,9 +60,9 @@ function renderSharedScreens() {
         options={{ 
           headerShown: true, 
           title: 'Hráč',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerBackTitleVisible: false, // Hide back button title on iOS
         }} 
       />
@@ -71,9 +72,9 @@ function renderSharedScreens() {
         options={{ 
           headerShown: true,
           title: 'Nastavení',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerTitleAlign: 'center' as const,
         }} 
       />
@@ -83,9 +84,9 @@ function renderSharedScreens() {
         options={{ 
           headerShown: true, 
           title: 'Novinky',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerTitleAlign: 'center',
         }} 
       />
@@ -95,9 +96,9 @@ function renderSharedScreens() {
         options={{ 
           headerShown: true, 
           title: 'Detail novinky',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' }
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white }
         }} 
       />
     </>
@@ -106,15 +107,16 @@ function renderSharedScreens() {
 
 // Helper function to create tab press handler
 function createTabPressHandler() {
-  return ({ navigation, route }: any) => ({
-    tabPress: (e: any) => {
+  return ({ navigation, route }: { navigation: BottomTabNavigationProp<TabParamList>; route: RouteProp<TabParamList, keyof TabParamList> }) => ({
+    tabPress: (e: EventArg<'tabPress', true>) => {
       const state = navigation.getState();
-      const targetRoute = state.routes.find((r: any) => r.name === route.name);
+      const targetRoute = state.routes.find((r) => r.name === route.name);
       const currentRoute = state.routes[state.index || 0];
       
-      if (targetRoute && targetRoute.state) {
-        const stackKey = targetRoute.state.key;
-        const stackIndex = targetRoute.state.index || 0;
+      const targetState = targetRoute?.state as NavigationState | PartialState<NavigationState> | undefined;
+      if (targetState) {
+        const stackKey = targetState.key;
+        const stackIndex = targetState.index || 0;
         
         if (stackKey && stackIndex > 0) {
           const mainScreenName = getMainScreenName(route.name);
@@ -123,7 +125,7 @@ function createTabPressHandler() {
             e.preventDefault();
             
             if (currentRoute.name !== route.name) {
-              navigation.navigate(route.name as any);
+              navigation.navigate(route.name);
             }
             
             navigation.dispatch({
@@ -149,9 +151,9 @@ function HomeStack() {
         options={{ 
           headerShown: true, 
           title: 'Novinky',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerTitleAlign: 'center',
         }} 
       />
@@ -161,9 +163,9 @@ function HomeStack() {
         options={{ 
           headerShown: true, 
           title: 'Detail zápasu',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerBackTitleVisible: false, // Hide back button title on iOS
         }} 
       />
@@ -182,9 +184,9 @@ function ProgramStack() {
         options={{ 
           headerShown: true, 
           title: 'Detail zápasu',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerBackTitleVisible: false, // Hide back button title on iOS
         }} 
       />
@@ -220,9 +222,9 @@ function InfoStack() {
         options={{ 
           headerShown: true, 
           title: 'Více',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerTitleAlign: 'center',
         }} 
       />
@@ -233,9 +235,9 @@ function InfoStack() {
         options={{ 
           headerShown: true,
           title: 'Debug',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerTitleAlign: 'center',
         }} 
       />
@@ -245,9 +247,9 @@ function InfoStack() {
         options={{ 
           headerShown: true,
           title: 'Notifikace',
-          headerStyle: { backgroundColor: '#014fa1' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { color: '#FFFFFF' },
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
           headerTitleAlign: 'center',
         }} 
       />
@@ -280,11 +282,11 @@ export default function TabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#014fa1',
-        tabBarInactiveTintColor: '#666666',
+        tabBarActiveTintColor: colors.brandBlue,
+        tabBarInactiveTintColor: colors.gray700,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E0E0E0',
+          backgroundColor: colors.white,
+          borderTopColor: colors.gray500,
           borderTopWidth: 1,
           // Use safe area insets for both platforms to prevent overlap with system UI
           ...(Platform.OS === 'android' && {

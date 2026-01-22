@@ -140,10 +140,10 @@ export function useStandings(teamId: number, seasonId: number) {
  * @param matchId Match ID
  */
 export function useMatchDetail(matchId: number) {
-  return useStaleWhileRevalidate<MatchDetail>({
+  return useStaleWhileRevalidate<MatchDetail | null>({
     cacheKey: `match:detail:${matchId}`,
     fetchFn: () => footballApi.getMatchDetail(matchId),
-    defaultData: null as any,
+    defaultData: null,
     errorMessage: 'Failed to load match detail',
     ttl: CACHE_TTL.MATCH_RESULTS,
   });
@@ -201,10 +201,10 @@ export function usePlayers(teamId: number) {
  * @param teamId Team ID
  */
 export function usePlayerById(playerId: number, teamId: number) {
-  return useStaleWhileRevalidate<PlayerDetail>({
+  return useStaleWhileRevalidate<PlayerDetail | null>({
     cacheKey: CACHE_KEY_PATTERNS.PLAYER_DETAIL(playerId, teamId),
     fetchFn: () => footballApi.getPlayerById(playerId, teamId),
-    defaultData: null as any,
+    defaultData: null,
     errorMessage: 'Failed to load player detail',
     ttl: CACHE_TTL.PLAYER_DETAIL,
   });

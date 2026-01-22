@@ -12,7 +12,6 @@ import {
   StatusBar,
   Image,
   Animated,
-  Dimensions,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -22,11 +21,10 @@ import { useNotificationPreferencesStore } from '../stores/notificationPreferenc
 import { notificationService } from '../services/notifications';
 import { crashlyticsService } from '../services/crashlytics';
 import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
 import { typography } from '../theme/ThemeProvider';
 import { footballApi, type Match } from '../api/footballEndpoints';
-import { useCurrentSeason } from '../hooks/useFootballData';
-
-const { width, height } = Dimensions.get('window');
+import { colors } from '../theme/colors';
 
 interface NotificationPermissionScreenProps {
   onComplete: () => void;
@@ -35,7 +33,6 @@ interface NotificationPermissionScreenProps {
 export function NotificationPermissionScreen({ onComplete }: NotificationPermissionScreenProps) {
   const { setPromptShown } = useNotificationPromptStore();
   const { favoriteTeamIds, matchStartReminderEnabled, matchResultNotificationEnabled, setFavoriteTeamIds } = useNotificationPreferencesStore();
-  const { data: currentSeason } = useCurrentSeason();
   const insets = useSafeAreaInsets();
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   
@@ -57,6 +54,12 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
       }),
     ]).start();
   }, [fadeAnim, slideAnim]);
+
+  useEffect(() => {
+    analyticsService.logEvent(AnalyticsEvent.PUSH_PERMISSION_PROMPT_SHOWN, {
+      source: 'notification_permission_screen',
+    });
+  }, []);
 
   const handleAllowNotifications = async () => {
     // Prevent multiple clicks
@@ -82,6 +85,10 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
         // Log Analytics event - permission granted
         analyticsService.logEvent('permission_granted', {
           permission_type: 'notifications',
+          source: 'notification_permission_screen',
+        });
+        analyticsService.logEvent(AnalyticsEvent.PUSH_PERMISSION_RESULT, {
+          granted: true,
           source: 'notification_permission_screen',
         });
         
@@ -158,6 +165,10 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
           permission_type: 'notifications',
           source: 'notification_permission_screen',
         });
+        analyticsService.logEvent(AnalyticsEvent.PUSH_PERMISSION_RESULT, {
+          granted: false,
+          source: 'notification_permission_screen',
+        });
       }
       
       // Complete and proceed to app
@@ -184,11 +195,15 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
     onComplete();
   };
 
-  if (Platform.OS === 'web') {
-    // Skip on web, proceed directly
-    useEffect(() => {
+  const isWeb = Platform.OS === 'web';
+  useEffect(() => {
+    if (isWeb) {
       onComplete();
-    }, [onComplete]);
+    }
+  }, [isWeb, onComplete]);
+
+  if (isWeb) {
+    // Skip on web, proceed directly
     return null;
   }
 
@@ -235,7 +250,7 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
           >
             {isRequestingPermission ? (
               <View style={styles.buttonLoadingContent}>
-                <ActivityIndicator size="small" color="#014fa1" style={styles.buttonLoader} />
+                <ActivityIndicator size="small" color={colors.brandBlue} style={styles.buttonLoader} />
                 <Text style={styles.primaryButtonText}>Zpracovává se...</Text>
               </View>
             ) : (
@@ -260,7 +275,7 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0144bc', // FC Zličín blue
+    backgroundColor: colors.brandBlueDark, // FC Zličín blue
   },
   content: {
     flex: 1,
@@ -281,7 +296,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: colors.overlayWhite15,
   },
   icon: {
     width: 200,
@@ -290,7 +305,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: typography.fontFamily.bold,
     fontSize: 24,
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 32,
@@ -298,7 +313,7 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: typography.fontFamily.regular,
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: colors.overlayWhite90,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -310,13 +325,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -327,7 +342,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: typography.fontFamily.bold,
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 16,
     letterSpacing: 0.3,
   },
@@ -349,12 +364,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: colors.overlayWhite50,
     marginBottom: 10,
   },
   secondaryButtonText: {
     fontFamily: typography.fontFamily.semiBold,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.overlayWhite80,
     fontSize: 15,
   },
   secondaryButtonDisabled: {

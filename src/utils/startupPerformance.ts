@@ -30,12 +30,14 @@ class StartupPerformanceTracker {
   private startTime: number;
   private checkpoints: Checkpoint[] = [];
   private enabled: boolean = true;
+  private hasPerformanceNow: boolean;
 
   constructor() {
+    this.hasPerformanceNow = typeof performance !== 'undefined' && typeof performance.now === 'function';
     // Use performance.now() for high-resolution timing
     // Fallback to Date.now() if not available
-    this.startTime = typeof performance !== 'undefined' && performance.now 
-      ? performance.now() 
+    this.startTime = this.hasPerformanceNow
+      ? performance.now()
       : Date.now();
     
     // Log the very first checkpoint
@@ -55,19 +57,15 @@ class StartupPerformanceTracker {
   markCheckpoint(tag: string, description?: string): void {
     if (!this.enabled) return;
 
-    const now = typeof performance !== 'undefined' && performance.now 
-      ? performance.now() 
+    const now = this.hasPerformanceNow
+      ? performance.now()
       : Date.now();
     
-    const timestamp = typeof performance !== 'undefined' && performance.now
-      ? now - this.startTime
-      : now - this.startTime;
+    const timestamp = now - this.startTime;
     
     const lastCheckpoint = this.checkpoints[this.checkpoints.length - 1];
     const delta = lastCheckpoint 
-      ? timestamp - (typeof performance !== 'undefined' && performance.now 
-          ? lastCheckpoint.timestamp 
-          : lastCheckpoint.timestamp)
+      ? timestamp - lastCheckpoint.timestamp
       : timestamp;
 
     const checkpoint: Checkpoint = {

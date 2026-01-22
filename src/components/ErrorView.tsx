@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { colors } from '../theme/colors';
 
 interface ErrorViewProps {
   error: Error;
@@ -30,7 +31,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   icon: {
     fontSize: 48,
@@ -38,22 +39,22 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: 'bold',
-    color: '#FF0000',
+    color: colors.errorText,
     marginBottom: 8,
   },
   message: {
-    color: '#666666',
+    color: colors.gray700,
     textAlign: 'center',
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: 'bold',
   },
 });

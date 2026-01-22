@@ -4,18 +4,29 @@
 
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors } from '../theme/colors';
+
+type CrashlyticsServiceType = typeof import('../services/crashlytics').crashlyticsService;
 
 // Lazy import crashlyticsService to avoid Firebase initialization during module import
-let crashlyticsService: any = null;
-const getCrashlyticsService = () => {
-  if (!crashlyticsService) {
-    try {
-      crashlyticsService = require('../services/crashlytics').crashlyticsService;
-    } catch (error) {
-      console.warn('⚠️ [ErrorBoundary.tsx] Failed to load crashlyticsService:', error);
-    }
+let crashlyticsService: CrashlyticsServiceType | null = null;
+let crashlyticsServicePromise: Promise<CrashlyticsServiceType | null> | null = null;
+const getCrashlyticsService = async (): Promise<CrashlyticsServiceType | null> => {
+  if (crashlyticsService) {
+    return crashlyticsService;
   }
-  return crashlyticsService;
+  if (!crashlyticsServicePromise) {
+    crashlyticsServicePromise = import('../services/crashlytics')
+      .then((module) => {
+        crashlyticsService = module.crashlyticsService;
+        return crashlyticsService;
+      })
+      .catch((error) => {
+        console.warn('⚠️ [ErrorBoundary.tsx] Failed to load crashlyticsService:', error);
+        return null;
+      });
+  }
+  return crashlyticsServicePromise;
 };
 
 interface Props {
@@ -40,15 +51,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log to Crashlytics (lazy loaded)
-    try {
-      const service = getCrashlyticsService();
-      if (service) {
-        service.recordError(error);
-        service.log(`ErrorBoundary: ${errorInfo.componentStack}`);
-      }
-    } catch (e) {
-      console.warn('⚠️ [ErrorBoundary] Failed to log to Crashlytics:', e);
-    }
+    getCrashlyticsService()
+      .then((service) => {
+        if (service) {
+          service.recordError(error);
+          service.log(`ErrorBoundary: ${errorInfo.componentStack}`);
+        }
+      })
+      .catch((e) => {
+        console.warn('⚠️ [ErrorBoundary] Failed to log to Crashlytics:', e);
+      });
     
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
@@ -89,41 +101,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#000',
+    color: colors.black,
   },
   message: {
     fontSize: 16,
-    color: '#666',
+    color: colors.gray700,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 24,
   },
   errorText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.gray600,
     fontFamily: 'monospace',
     marginBottom: 24,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.iosBlue,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
 });
-
 
 
 

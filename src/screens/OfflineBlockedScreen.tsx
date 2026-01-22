@@ -3,7 +3,7 @@
  * Shown when offline and no cached data is available
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,17 +15,36 @@ import {
 } from 'react-native';
 import { useBootstrap } from '../providers/BootstrapProvider';
 import { useTheme } from '../theme/ThemeProvider';
+import { colors } from '../theme/colors';
+import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
 
 export function OfflineBlockedScreen() {
   const { retry } = useBootstrap();
   const { globalStyles } = useTheme();
 
+  useEffect(() => {
+    analyticsService.logEvent(AnalyticsEvent.OFFLINE_BLOCKED_SHOWN, {
+      source: 'bootstrap',
+    });
+  }, []);
+
   const handleOpenSettings = () => {
+    analyticsService.logEvent(AnalyticsEvent.OFFLINE_OPEN_SETTINGS, {
+      source: 'offline_blocked_screen',
+    });
     if (Platform.OS === 'ios') {
       Linking.openURL('app-settings:');
     } else {
       Linking.openSettings();
     }
+  };
+
+  const handleRetry = () => {
+    analyticsService.logEvent(AnalyticsEvent.OFFLINE_RETRY_CLICKED, {
+      source: 'offline_blocked_screen',
+    });
+    retry();
   };
 
   return (
@@ -41,7 +60,7 @@ export function OfflineBlockedScreen() {
         </Text>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={retry}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleRetry}>
             <Text style={[globalStyles.button, styles.primaryButtonText]}>Zkusit znovu</Text>
           </TouchableOpacity>
 
@@ -57,7 +76,7 @@ export function OfflineBlockedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
   },
   content: {
     flex: 1,
@@ -66,12 +85,12 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 16,
   },
   description: {
-    color: '#CCCCCC',
+    color: colors.gray450,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -83,7 +102,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 8,
@@ -91,7 +110,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -102,15 +121,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#014fa1',
+    borderColor: colors.brandBlue,
   },
   secondaryButtonText: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 16,
     fontWeight: '600',
   },
 });
-
 
 
 

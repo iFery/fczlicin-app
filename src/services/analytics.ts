@@ -5,7 +5,7 @@ class AnalyticsService {
   /**
    * Zaznamená event do Analytics
    */
-  logEvent(eventName: string, params?: { [key: string]: any }): void {
+  logEvent(eventName: string, params?: Record<string, unknown>): void {
     try {
       if (!isFirebaseReady()) {
         console.warn('Analytics: Firebase not ready, skipping logEvent');
@@ -18,7 +18,7 @@ class AnalyticsService {
       }
       
       analytics().logEvent(eventName, params);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [analytics.ts] Error logging event:', e);
     }
   }
@@ -33,7 +33,7 @@ class AnalyticsService {
         return;
       }
       analytics().setUserProperty(name, value);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [analytics.ts] Error setting user property:', e);
     }
   }
@@ -48,7 +48,7 @@ class AnalyticsService {
         return;
       }
       analytics().setUserId(userId);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [analytics.ts] Error setting user ID:', e);
     }
   }
@@ -66,7 +66,7 @@ class AnalyticsService {
         screen_name: screenName,
         screen_class: screenClass || screenName,
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [analytics.ts] Error logging screen view:', e);
     }
   }
@@ -81,7 +81,7 @@ class AnalyticsService {
         return;
       }
       analytics().setAnalyticsCollectionEnabled(enabled);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [analytics.ts] Error setting analytics collection enabled:', e);
     }
   }
@@ -96,7 +96,7 @@ class AnalyticsService {
         return;
       }
       analytics().resetAnalyticsData();
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('❌ [analytics.ts] Error resetting analytics data:', e);
     }
   }
@@ -105,7 +105,7 @@ class AnalyticsService {
    * Loguje event s console výstupem pro debugging
    * V development módu také vypíše event do konzole
    */
-  logEventWithDebug(eventName: string, params?: { [key: string]: any }): void {
+  logEventWithDebug(eventName: string, params?: Record<string, unknown>): void {
     // V development módu vypiš do konzole
     if (__DEV__) {
       console.log(`📊 [Analytics] Event: ${eventName}`, params || {});

@@ -2,15 +2,17 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, typography } from '../theme/ThemeProvider';
+import type { MatchDetail } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
 
 interface MatchDetailsProps {
-  match: any;
+  match: MatchDetail;
 }
 
 const MatchDetails: React.FC<MatchDetailsProps> = ({ match }) => {
   const { globalStyles } = useTheme();
 
-  const hasValidValue = (value: any): boolean => {
+  const hasValidValue = (value: unknown): boolean => {
     if (value === null || value === undefined) return false;
     if (typeof value === 'string') return value.trim().length > 0;
     if (typeof value === 'number') return true;
@@ -34,7 +36,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match }) => {
       <ScrollView style={styles.container}>
         <View style={styles.placeholderContainer}>
           <View style={styles.placeholderContent}>
-            <Ionicons name="calendar-outline" size={64} color="#CCCCCC" />
+            <Ionicons name="calendar-outline" size={64} color={colors.gray450} />
             <Text style={[styles.placeholderTitle, { fontFamily: typography.fontFamily.bold }]}>
               Zápas ještě nebyl odehrán
             </Text>
@@ -121,11 +123,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   detailsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -138,7 +140,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#014fa1',
+    color: colors.brandBlue,
     textAlign: 'center',
   },
   detailRow: {
@@ -147,11 +149,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.gray400,
   },
   detailLabel: {
     fontWeight: '600',
-    color: '#666666',
+    color: colors.gray700,
     flex: 1,
   },
   detailValue: {
@@ -159,11 +161,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   lineupsSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -178,20 +180,20 @@ const styles = StyleSheet.create({
   teamTitle: {
     fontWeight: 'bold',
     fontSize: 16,
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginBottom: 8,
   },
   lineupText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#333333',
+    color: colors.gray900,
   },
   placeholderContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 40,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -209,14 +211,14 @@ const styles = StyleSheet.create({
   },
   placeholderTitle: {
     fontSize: 20,
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   placeholderText: {
     fontSize: 16,
-    color: '#999999',
+    color: colors.gray600,
     textAlign: 'center',
     lineHeight: 24,
   },

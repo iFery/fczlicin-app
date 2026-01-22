@@ -1,16 +1,18 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { RouteProp, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeProvider';
 import { usePlayerById } from '../hooks/useFootballData';
 import { LoadingSpinner, ErrorView } from '../components';
 import type { RootStackParamList } from '../navigation/linking';
+import type { PlayerDetail } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
 
 type PlayerDetailRouteProp = RouteProp<RootStackParamList, 'PlayerDetail'>;
+type PlayerCompetition = NonNullable<PlayerDetail['competitions']>[number];
 
 const PlayerDetailScreen: React.FC = () => {
   const route = useRoute<PlayerDetailRouteProp>();
-  const navigation = useNavigation();
   const { playerId, teamId } = route.params;
   const { globalStyles } = useTheme();
 
@@ -76,7 +78,7 @@ const PlayerDetailScreen: React.FC = () => {
         {player.competitions && player.competitions.length > 0 && (
           <View style={styles.statsSection}>
             <Text style={[globalStyles.heading, styles.sectionTitle]}>Statistiky za sezóny</Text>
-            {player.competitions.map((competition: any, index: number) => (
+            {player.competitions.map((competition: PlayerCompetition, index: number) => (
               <View key={index} style={styles.competitionCard}>
                 <View style={styles.competitionHeader}>
                   <Text style={[globalStyles.text, styles.seasonName]}>
@@ -121,7 +123,7 @@ const PlayerDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   content: {
     padding: 16,
@@ -130,16 +132,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.gray500,
   },
   playerName: {
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   infoSection: {
     marginBottom: 24,
   },
   sectionTitle: {
-    color: '#333333',
+    color: colors.gray900,
     marginBottom: 12,
   },
   infoRow: {
@@ -147,35 +149,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.gray400,
   },
   infoLabel: {
-    color: '#666666',
+    color: colors.gray700,
   },
   infoValue: {
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
   },
   statsSection: {
     marginBottom: 24,
   },
   competitionCard: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.gray200,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#014fa1',
+    borderLeftColor: colors.brandBlue,
   },
   competitionHeader: {
     marginBottom: 12,
   },
   seasonName: {
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   competitionName: {
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 2,
   },
   statsGrid: {
@@ -190,17 +192,17 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   statLabel: {
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 4,
     textAlign: 'center',
   },
   errorText: {
     textAlign: 'center',
     marginTop: 50,
-    color: '#666666',
+    color: colors.gray700,
   },
 });
 

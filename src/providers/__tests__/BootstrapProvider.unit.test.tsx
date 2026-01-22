@@ -8,10 +8,8 @@ import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { preloadAllData } from '../../services/preloadService';
 import { hasAnyValidCache, getOldestCacheAge } from '../../utils/cacheManager';
+import { checkForUpdate } from '../../services/updateService';
 import { BootstrapProvider, useBootstrap } from '../BootstrapProvider';
-
-// Helper to flush all promises
-const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 // Mock dependencies
 jest.mock('../../services/preloadService');
@@ -20,11 +18,13 @@ jest.mock('../../services/firebase');
 jest.mock('../../services/crashlytics');
 jest.mock('../../services/remoteConfig');
 jest.mock('../../services/notifications');
+jest.mock('../../services/updateService');
 
 const mockedNetInfo = NetInfo as jest.Mocked<typeof NetInfo>;
 const mockedPreloadAllData = preloadAllData as jest.MockedFunction<typeof preloadAllData>;
 const mockedHasAnyValidCache = hasAnyValidCache as jest.MockedFunction<typeof hasAnyValidCache>;
 const mockedGetOldestCacheAge = getOldestCacheAge as jest.MockedFunction<typeof getOldestCacheAge>;
+const mockedCheckForUpdate = checkForUpdate as jest.MockedFunction<typeof checkForUpdate>;
 
 describe('BootstrapProvider - Unit Tests', () => {
   beforeEach(() => {
@@ -36,6 +36,8 @@ describe('BootstrapProvider - Unit Tests', () => {
     mockedGetOldestCacheAge.mockReset();
     mockedPreloadAllData.mockReset();
     mockedNetInfo.fetch.mockReset();
+    mockedCheckForUpdate.mockReset();
+    mockedCheckForUpdate.mockResolvedValue({ type: 'none', latestVersion: '1.0.0' });
   });
 
   const renderBootstrapHook = () => {
@@ -51,10 +53,8 @@ describe('BootstrapProvider - Unit Tests', () => {
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: true,
       } as any);
-      // First call: no cache before fetch, second call: cache exists after fetch
-      mockedHasAnyValidCache
-        .mockResolvedValueOnce(false) // Before fetch - no cache
-        .mockResolvedValueOnce(true); // After fetch - cache created
+      // Only one cache check during bootstrap (preload is non-blocking)
+      mockedHasAnyValidCache.mockResolvedValueOnce(false); // No cache
       mockedPreloadAllData.mockResolvedValue({
         success: true,
         errors: [],
@@ -71,32 +71,30 @@ describe('BootstrapProvider - Unit Tests', () => {
 
       // Verify behavior
       expect(mockedNetInfo.fetch).toHaveBeenCalled();
-      expect(mockedHasAnyValidCache).toHaveBeenCalledTimes(2);
+      expect(mockedHasAnyValidCache).toHaveBeenCalledTimes(1);
       expect(mockedPreloadAllData).toHaveBeenCalled();
     });
   });
 
   describe('Scenario 2: online + fetch error + cache exists => ready-offline', () => {
-    it('should transition to ready-offline when online, fetch fails, but cache exists', async () => {
-      // Setup: online, cache exists, fetch fails
+    it('should stay ready-online when online even if preload fails', async () => {
+      // Setup: online, preload fails
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: true,
       } as any);
-      mockedHasAnyValidCache
-        .mockResolvedValueOnce(true) // Initial cache check
-        .mockResolvedValueOnce(false); // After fetch attempt
+      mockedHasAnyValidCache.mockResolvedValueOnce(true);
       mockedGetOldestCacheAge.mockResolvedValue(1000 * 60 * 60); // 1 hour old
       mockedPreloadAllData.mockRejectedValue(new Error('Network error'));
 
       const { result } = renderBootstrapHook();
 
       await waitFor(() => {
-        expect(result.current.state).toBe('ready-offline');
+        expect(result.current.state).toBe('ready-online');
       }, { timeout: 3000 });
 
       // Verify behavior
       expect(mockedPreloadAllData).toHaveBeenCalled();
-      expect(result.current.state).toBe('ready-offline');
+      expect(result.current.state).toBe('ready-online');
     });
   });
 
@@ -144,7 +142,7 @@ describe('BootstrapProvider - Unit Tests', () => {
   });
 
   describe('Scenario 4: offline + no cache => offline-blocked', () => {
-    it('should transition to offline-blocked when offline and no cache exists', async () => {
+    it('should transition to ready-offline when offline even without cache', async () => {
       // Setup: offline, no cache
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: false,
@@ -157,7 +155,7 @@ describe('BootstrapProvider - Unit Tests', () => {
       const { result } = renderBootstrapHook();
 
       await waitFor(() => {
-        expect(result.current.state).toBe('offline-blocked');
+        expect(result.current.state).toBe('ready-offline');
       }, { timeout: 10000 });
 
       // Verify behavior
@@ -181,7 +179,7 @@ describe('BootstrapProvider - Unit Tests', () => {
       const { result } = renderBootstrapHook();
 
       await waitFor(() => {
-        expect(result.current.state).toBe('offline-blocked');
+        expect(result.current.state).toBe('ready-offline');
       }, { timeout: 10000 });
 
       // Reset mocks for retry scenario
@@ -193,10 +191,9 @@ describe('BootstrapProvider - Unit Tests', () => {
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: true,
       } as any);
-      // First call: no cache before fetch, second call: cache exists after fetch, third for catch block
+      // Single cache check during bootstrap
       mockedHasAnyValidCache
         .mockResolvedValueOnce(false) // Before fetch - no cache
-        .mockResolvedValueOnce(true) // After fetch - cache created
         .mockResolvedValueOnce(true); // Catch block check (if any error)
       mockedPreloadAllData.mockResolvedValue({
         success: true,
@@ -227,7 +224,7 @@ describe('BootstrapProvider - Unit Tests', () => {
       const { result } = renderBootstrapHook();
 
       await waitFor(() => {
-        expect(result.current.state).toBe('offline-blocked');
+        expect(result.current.state).toBe('ready-online');
       }, { timeout: 3000 });
     });
 
@@ -236,10 +233,9 @@ describe('BootstrapProvider - Unit Tests', () => {
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: true,
       } as any);
-      // First call: no cache before fetch, second call: cache exists after fetch, third for catch block
+      // Single cache check during bootstrap
       mockedHasAnyValidCache
         .mockResolvedValueOnce(false) // Before fetch - no cache
-        .mockResolvedValueOnce(true) // After fetch - cache created
         .mockResolvedValueOnce(true); // Catch block check (if any error)
       mockedGetOldestCacheAge.mockResolvedValue(1000);
       mockedPreloadAllData.mockResolvedValue({
@@ -253,5 +249,102 @@ describe('BootstrapProvider - Unit Tests', () => {
         expect(result.current.state).toBe('ready-online');
       }, { timeout: 10000 });
     }, 15000);
+  });
+
+  describe('Update flow', () => {
+    it('should transition to update-required when forced update is available', async () => {
+      mockedNetInfo.fetch.mockResolvedValue({
+        isInternetReachable: true,
+      } as any);
+      mockedHasAnyValidCache.mockResolvedValueOnce(false);
+      mockedCheckForUpdate.mockResolvedValue({
+        type: 'forced',
+        latestVersion: '2.0.0',
+      });
+
+      const { result } = renderBootstrapHook();
+
+      await waitFor(() => {
+        expect(result.current.state).toBe('update-required');
+      });
+    });
+
+    it('should transition to update-optional when optional update is available and not skipped', async () => {
+      mockedNetInfo.fetch.mockResolvedValue({
+        isInternetReachable: true,
+      } as any);
+      mockedHasAnyValidCache.mockResolvedValueOnce(false);
+      mockedCheckForUpdate.mockResolvedValue({
+        type: 'optional',
+        latestVersion: '2.0.0',
+      });
+      jest.spyOn(AsyncStorage, 'getItem').mockResolvedValueOnce(null);
+
+      const { result } = renderBootstrapHook();
+
+      await waitFor(() => {
+        expect(result.current.state).toBe('update-optional');
+      });
+    });
+
+    it('should skip optional update when version was previously skipped', async () => {
+      mockedNetInfo.fetch.mockResolvedValue({
+        isInternetReachable: true,
+      } as any);
+      mockedHasAnyValidCache.mockResolvedValueOnce(false);
+      mockedCheckForUpdate.mockResolvedValue({
+        type: 'optional',
+        latestVersion: '2.0.0',
+      });
+      jest.spyOn(AsyncStorage, 'getItem').mockResolvedValueOnce('2.0.0');
+
+      const { result } = renderBootstrapHook();
+
+      await waitFor(() => {
+        expect(result.current.state).toBe('ready-online');
+      });
+    });
+
+    it('should continue bootstrap when update check fails', async () => {
+      mockedNetInfo.fetch.mockResolvedValue({
+        isInternetReachable: true,
+      } as any);
+      mockedHasAnyValidCache.mockResolvedValueOnce(false);
+      mockedCheckForUpdate.mockRejectedValue(new Error('Update error'));
+
+      const { result } = renderBootstrapHook();
+
+      await waitFor(() => {
+        expect(result.current.state).toBe('ready-online');
+      });
+    });
+
+    it('should set ready-offline after skipping optional update while offline', async () => {
+      mockedNetInfo.fetch.mockResolvedValue({
+        isInternetReachable: true,
+      } as any);
+      mockedHasAnyValidCache.mockResolvedValueOnce(false);
+      mockedCheckForUpdate.mockResolvedValue({
+        type: 'optional',
+        latestVersion: '2.0.0',
+      });
+      jest.spyOn(AsyncStorage, 'getItem').mockResolvedValueOnce(null);
+
+      const { result } = renderBootstrapHook();
+
+      await waitFor(() => {
+        expect(result.current.state).toBe('update-optional');
+      });
+
+      mockedNetInfo.fetch.mockResolvedValue({
+        isInternetReachable: false,
+      } as any);
+
+      await result.current.skipUpdate();
+
+      await waitFor(() => {
+        expect(result.current.state).toBe('ready-offline');
+      });
+    });
   });
 });

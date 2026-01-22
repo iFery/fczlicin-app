@@ -1,9 +1,11 @@
 import React, { useMemo, memo } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import type { Match } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
 
 interface MatchCardProps {
-  match: any;
+  match: Match;
   teamName?: string; // Optional team name (e.g., "Muži A", "Muži B")
 }
 
@@ -33,14 +35,14 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, teamName }) => {
     const isFinished = match.status === 'finished' || (match.status !== 'scheduled' && match.status !== 'live' && match.homeScore != null && match.awayScore != null);
     
     if (!isFinished) {
-      return match.status === 'scheduled' ? '#ffc107' : match.status === 'live' ? '#dc3545' : '#666666';
+      return match.status === 'scheduled' ? colors.warningStrong : match.status === 'live' ? colors.error : colors.gray700;
     }
 
     const isFCZlicinHome = match.homeTeam === 'FC Zličín';
     const isFCZlicinAway = match.awayTeam === 'FC Zličín';
     
     if (!isFCZlicinHome && !isFCZlicinAway) {
-      return '#666666';
+      return colors.gray700;
     }
 
     const homeScore = match.homeScore ?? 0;
@@ -48,19 +50,19 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, teamName }) => {
 
     if (isFCZlicinHome) {
       if (homeScore > awayScore) {
-        return '#28a745'; // Green for win
+        return colors.success; // Green for win
       } else if (homeScore < awayScore) {
-        return '#dc3545'; // Red for loss
+        return colors.error; // Red for loss
       } else {
-        return '#014fa1'; // Blue for draw
+        return colors.brandBlue; // Blue for draw
       }
     } else {
       if (awayScore > homeScore) {
-        return '#28a745'; // Green for win
+        return colors.success; // Green for win
       } else if (awayScore < homeScore) {
-        return '#dc3545'; // Red for loss
+        return colors.error; // Red for loss
       } else {
-        return '#014fa1'; // Blue for draw
+        return colors.brandBlue; // Blue for draw
       }
     }
   }, [match.status, match.homeTeam, match.awayTeam, match.homeScore, match.awayScore]);
@@ -127,9 +129,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 15,
     padding: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -150,20 +152,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   placeholderLogo: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoText: {
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     fontSize: 10,
   },
   teamName: {
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.gray900,
     textAlign: 'center',
     fontSize: 12,
   },
@@ -173,12 +175,12 @@ const styles = StyleSheet.create({
   },
   roundText: {
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginBottom: 4,
     fontSize: 12,
   },
   matchDate: {
-    color: '#666666',
+    color: colors.gray700,
     marginBottom: 8,
     fontSize: 11,
   },
@@ -186,7 +188,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   competition: {
-    color: '#666666',
+    color: colors.gray700,
     fontSize: 10,
     fontStyle: 'italic',
   },

@@ -3,7 +3,7 @@
  * Supports forced and optional updates
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,9 +14,13 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UpdateInfo, openStoreForUpdate } from '../services/updateService';
 import { crashlyticsService } from '../services/crashlytics';
+import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
+import logoImage from '../../assets/logo.png';
+import { colors } from '../theme/colors';
 
 interface UpdateScreenProps {
   updateInfo: UpdateInfo;
@@ -41,13 +45,22 @@ export function UpdateScreen({ updateInfo, onUpdate, onLater }: UpdateScreenProp
   const whatsNew = updateInfo.whatsNew || DEFAULT_WHATS_NEW;
   const insets = useSafeAreaInsets();
 
-  const logoImage = require('../../assets/logo.png');
+  useEffect(() => {
+    analyticsService.logEvent(AnalyticsEvent.UPDATE_PROMPT_SHOWN, {
+      type: updateInfo.type,
+      latest_version: updateInfo.latestVersion,
+    });
+  }, [updateInfo]);
 
   const handleUpdate = async () => {
     if (isUpdating) return; // Prevent double-tap
     
     setIsUpdating(true);
     crashlyticsService.log('update_accepted');
+    analyticsService.logEvent(AnalyticsEvent.UPDATE_ACCEPTED, {
+      type: updateInfo.type,
+      latest_version: updateInfo.latestVersion,
+    });
     
     try {
       await openStoreForUpdate();
@@ -62,6 +75,9 @@ export function UpdateScreen({ updateInfo, onUpdate, onLater }: UpdateScreenProp
     if (isForced) return; // Should not happen, but safety check
     
     crashlyticsService.log('update_postponed');
+    analyticsService.logEvent(AnalyticsEvent.UPDATE_LATER, {
+      latest_version: updateInfo.latestVersion,
+    });
     onLater?.();
   };
 
@@ -133,7 +149,7 @@ export function UpdateScreen({ updateInfo, onUpdate, onLater }: UpdateScreenProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
   },
   scrollContent: {
     flexGrow: 1,
@@ -159,14 +175,14 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 16,
     paddingHorizontal: 16,
   },
   description: {
     fontSize: 16,
-    color: '#CCCCCC',
+    color: colors.gray450,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -184,14 +200,14 @@ const styles = StyleSheet.create({
   },
   bullet: {
     fontSize: 18,
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginRight: 12,
     marginTop: 2,
   },
   bulletText: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: colors.white,
     lineHeight: 24,
   },
   actionsContainer: {
@@ -202,7 +218,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   primaryButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingVertical: 18,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -211,7 +227,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     ...Platform.select({
       ios: {
-        shadowColor: '#014fa1',
+        shadowColor: colors.brandBlue,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -225,7 +241,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: 0.3,
@@ -237,9 +253,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryButtonText: {
-    color: '#CCCCCC',
+    color: colors.gray450,
     fontSize: 16,
     fontWeight: '500',
   },
 });
-

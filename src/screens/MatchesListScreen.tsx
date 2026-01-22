@@ -8,6 +8,7 @@ import {
   Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMatchCalendar, useMatchResults, useSeasons, useTeams, useCompetition, useCurrentSeason } from '../hooks/useFootballData';
 import { useTheme } from '../theme/ThemeProvider';
 import Card from '../components/Card';
@@ -15,11 +16,16 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorView from '../components/ErrorView';
 import FilterModal from '../components/FilterModal';
 import NoCompetitionView from '../components/NoCompetitionView';
+import type { RootStackParamList } from '../navigation/linking';
+import type { Match } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
+import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
 
 import headerBg from '../../assets/header-matches-bg.png';
 
 const MatchesListScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [activeTab, setActiveTab] = useState<'calendar' | 'results'>('results');
   const { data: seasons } = useSeasons();
   const { data: teams } = useTeams();
@@ -74,6 +80,12 @@ const MatchesListScreen: React.FC = () => {
   };
 
   const handleFilterApply = (seasonId: string, teamId: string) => {
+    analyticsService.logEvent(AnalyticsEvent.MATCHES_FILTER_APPLY, {
+      season_id: seasonId,
+      team_id: teamId,
+      previous_season_id: selectedSeason,
+      previous_team_id: selectedTeam,
+    });
     setSelectedSeason(seasonId);
     setSelectedTeam(teamId);
   };
@@ -143,15 +155,15 @@ const MatchesListScreen: React.FC = () => {
     );
   }
 
-  const getResultColor = (match: any) => {
+  const getResultColor = (match: Match) => {
     if (match.status !== 'finished') {
       switch (match.status) {
         case 'scheduled':
-          return '#ffc107';
+          return colors.warningStrong;
         case 'live':
-          return '#dc3545';
+          return colors.error;
         default:
-          return '#666666';
+          return colors.gray700;
       }
     }
 
@@ -159,7 +171,7 @@ const MatchesListScreen: React.FC = () => {
     const isFCZlicinAway = match.awayTeam === 'FC Zličín';
     
     if (!isFCZlicinHome && !isFCZlicinAway) {
-      return '#666666';
+      return colors.gray700;
     }
 
     const homeScore = match.homeScore || 0;
@@ -167,25 +179,25 @@ const MatchesListScreen: React.FC = () => {
 
     if (isFCZlicinHome) {
       if (homeScore > awayScore) {
-        return '#28a745';
+        return colors.success;
       } else if (homeScore < awayScore) {
-        return '#dc3545';
+        return colors.error;
       } else {
-        return '#014fa1';
+        return colors.brandBlue;
       }
     } else {
       if (awayScore > homeScore) {
-        return '#28a745';
+        return colors.success;
       } else if (awayScore < homeScore) {
-        return '#dc3545';
+        return colors.error;
       } else {
-        return '#014fa1';
+        return colors.brandBlue;
       }
     }
   };
 
-  const groupMatchesByMonth = (matchData: any[]) => {
-    const grouped: { [key: string]: any[] } = {};
+  const groupMatchesByMonth = (matchData: Match[]) => {
+    const grouped: Record<string, Match[]> = {};
     
     const sortedMatches = matchData?.sort((a, b) => {
       try {
@@ -211,7 +223,7 @@ const MatchesListScreen: React.FC = () => {
       }
     });
     
-    const sortedGrouped: { [key: string]: any[] } = {};
+    const sortedGrouped: Record<string, Match[]> = {};
     Object.keys(grouped)
       .sort((a, b) => {
         try {
@@ -236,7 +248,18 @@ const MatchesListScreen: React.FC = () => {
 
   const groupedMatches = groupMatchesByMonth(matches || []);
 
-  const renderMatchItem = (match: any) => {
+  const handleTabPress = (tab: 'calendar' | 'results') => {
+    if (tab !== activeTab) {
+      analyticsService.logEvent(AnalyticsEvent.MATCHES_TAB_SWITCH, {
+        tab,
+        season_id: selectedSeason,
+        team_id: selectedTeam,
+      });
+      setActiveTab(tab);
+    }
+  };
+
+  const renderMatchItem = (match: Match) => {
     try {
       if (!match || !match.id) {
         console.warn('Invalid match data:', match);
@@ -246,10 +269,18 @@ const MatchesListScreen: React.FC = () => {
       const hasDetail = match.hasDetail !== false; // Default true pokud není specifikováno
       const canOpenDetail = activeTab === 'results' && hasDetail;
       
+      const handleMatchPress = () => {
+        if (!canOpenDetail) return;
+        navigation.navigate('MatchDetail', {
+          matchId: match.id.toString(),
+          source: 'matches_list',
+        });
+      };
+
       return (
         <TouchableOpacity
           key={match.id}
-          onPress={() => canOpenDetail ? (navigation as any).navigate('MatchDetail', { matchId: match.id.toString(), teamName: getTeamName() }) : null}
+          onPress={handleMatchPress}
           activeOpacity={1}
           disabled={activeTab === 'calendar' || !hasDetail}
         >
@@ -315,7 +346,7 @@ const MatchesListScreen: React.FC = () => {
     }
   };
 
-  const renderMonthSection = (month: string, monthMatches: any[]) => (
+  const renderMonthSection = (month: string, monthMatches: Match[]) => (
     <View key={month} style={styles.monthSection}>
       <Text style={[globalStyles.heading, styles.monthTitle]}>{month}</Text>
       {monthMatches.map(renderMatchItem)}
@@ -356,7 +387,7 @@ const MatchesListScreen: React.FC = () => {
         <View style={styles.tabContainer}>
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'calendar' && styles.activeTab]}
-            onPress={() => setActiveTab('calendar')}
+            onPress={() => handleTabPress('calendar')}
           >
             <Text style={[globalStyles.text, styles.tabText, activeTab === 'calendar' && styles.activeTabText]}>
               Kalendář
@@ -364,7 +395,7 @@ const MatchesListScreen: React.FC = () => {
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'results' && styles.activeTab]}
-            onPress={() => setActiveTab('results')}
+            onPress={() => handleTabPress('results')}
           >
             <Text style={[globalStyles.text, styles.tabText, activeTab === 'results' && styles.activeTabText]}>
               Výsledky
@@ -400,7 +431,7 @@ const MatchesListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   header: {
     height: 200,
@@ -416,7 +447,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlay40,
     padding: 20,
   },
   headerBottom: {
@@ -429,7 +460,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     position: 'absolute',
     top: '50%',
@@ -442,42 +473,42 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerTeam: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: 'bold',
   },
   headerSeason: {
-    color: '#FFFFFF',
+    color: colors.white,
     opacity: 0.8,
   },
   filterButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.overlayWhite20,
     padding: 8,
     borderRadius: 6,
   },
   filterButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: 6,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.white,
   },
   activeTab: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
   },
   tabText: {
-    color: '#666666',
+    color: colors.gray700,
   },
   activeTabText: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   scrollView: {
     flex: 1,
@@ -489,8 +520,8 @@ const styles = StyleSheet.create({
   monthTitle: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    color: '#333333',
-    backgroundColor: '#FFFFFF',
+    color: colors.gray900,
+    backgroundColor: colors.white,
     marginBottom: 10,
     textTransform: 'capitalize'
   },
@@ -498,9 +529,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 10,
     padding: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -521,18 +552,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   placeholderLogo: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoText: {
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
   },
   teamName: {
-    color: '#333333',
+    color: colors.gray900,
     textAlign: 'center',
     fontSize: 14,
   },
@@ -542,12 +573,12 @@ const styles = StyleSheet.create({
   },
   roundText: {
     fontWeight: 'bold',
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginBottom: 4,
     fontSize: 12,
   },
   matchDate: {
-    color: '#666666',
+    color: colors.gray700,
     marginBottom: 8,
   },
   score: {

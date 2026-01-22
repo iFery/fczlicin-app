@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { colors } from '../theme/colors';
 
 interface NoCompetitionViewProps {
   teamName: string;
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   content: {
     alignItems: 'center',
@@ -72,23 +73,23 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#F0F4F8',
+    backgroundColor: colors.gray050,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E0E7EF',
+    borderColor: colors.gray025,
   },
   icon: {
     fontSize: 48,
   },
   title: {
-    color: '#333333',
+    color: colors.gray900,
     textAlign: 'center',
     marginBottom: 16,
     fontSize: 22,
   },
   message: {
-    color: '#666666',
+    color: colors.gray700,
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 24,
@@ -96,27 +97,27 @@ const styles = StyleSheet.create({
   },
   teamNameHighlight: {
     fontWeight: '600',
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   seasonNameHighlight: {
     fontWeight: '600',
-    color: '#014fa1',
+    color: colors.brandBlue,
   },
   subtitle: {
-    color: '#999999',
+    color: colors.gray600,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 32,
     fontSize: 14,
   },
   actionButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 8,
     minWidth: 200,
     alignItems: 'center',
-    shadowColor: '#014fa1',
+    shadowColor: colors.brandBlue,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

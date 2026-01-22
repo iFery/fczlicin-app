@@ -7,7 +7,6 @@
 import * as Linking from 'expo-linking';
 import { navigationQueue } from '../navigation/navigationQueue';
 import { validateNavigationParams, sanitizeNavigationParams } from '../utils/navigationValidation';
-import { parseNotificationToNavParams } from '../navigation/linking';
 import type { RootStackParamList } from '../navigation/linking';
 
 class DeepLinkService {
@@ -109,7 +108,7 @@ class DeepLinkService {
    */
   private parseURLToNavParams(
     path: string,
-    queryParams: Record<string, any>
+    queryParams: Record<string, string | string[] | undefined>
   ): { screen: keyof RootStackParamList; params?: RootStackParamList[keyof RootStackParamList] } | null {
     // Remove leading slash
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
@@ -162,5 +161,4 @@ class DeepLinkService {
 }
 
 export const deepLinkService = new DeepLinkService();
-
 

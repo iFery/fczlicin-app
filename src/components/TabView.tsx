@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import { colors } from '../theme/colors';
 
 interface TabViewProps {
   tabs: {
@@ -49,7 +50,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
     borderRadius: 8,
     marginHorizontal: 16,
     marginBottom: 16,
@@ -63,15 +64,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   activeTab: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#666666',
+    color: colors.gray700,
   },
   activeTabText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
   },
   content: {

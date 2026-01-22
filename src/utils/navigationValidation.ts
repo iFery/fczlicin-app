@@ -24,7 +24,7 @@ export function validateNavigationParams(
   params?: RootStackParamList[keyof RootStackParamList]
 ): { valid: boolean; error?: string } {
   switch (screen) {
-    case 'NewsDetail':
+    case 'NewsDetail': {
       if (!params || typeof params !== 'object') {
         return { valid: false, error: 'Missing news parameters' };
       }
@@ -33,6 +33,7 @@ export function validateNavigationParams(
         return { valid: false, error: 'Invalid news ID' };
       }
       return { valid: true };
+    }
 
     case 'HomeMain':
     case 'MatchesMain':
@@ -74,5 +75,4 @@ export function sanitizeNavigationParams(
       return params;
   }
 }
-
 

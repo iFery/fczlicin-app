@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,10 +8,10 @@ import {
   ScrollView,
   Dimensions 
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeProvider';
 import SelectBox from './SelectBox';
 import { useSeasons, useTeams } from '../hooks/useFootballData';
+import { colors } from '../theme/colors';
 
 const { height } = Dimensions.get('window');
 
@@ -35,10 +35,16 @@ const FilterModal: React.FC<FilterModalProps> = ({
   const [localSelectedSeason, setLocalSelectedSeason] = useState(selectedSeason);
   const [localSelectedTeam, setLocalSelectedTeam] = useState(selectedTeam);
   const { globalStyles } = useTheme();
-  const insets = useSafeAreaInsets();
 
   const { data: seasons } = useSeasons();
   const { data: teams } = useTeams();
+
+  useEffect(() => {
+    if (visible) {
+      setLocalSelectedSeason(selectedSeason);
+      setLocalSelectedTeam(selectedTeam);
+    }
+  }, [visible, selectedSeason, selectedTeam]);
 
   const handleApply = () => {
     onApply(localSelectedSeason, localSelectedTeam);
@@ -87,7 +93,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
             />
           </ScrollView>
 
-          <View style={[styles.footer]}>
+          <View style={styles.footer}>
             <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
               <Text style={[globalStyles.button, styles.cancelButtonText]}>Zrušit</Text>
             </TouchableOpacity>
@@ -104,11 +110,11 @@ const FilterModal: React.FC<FilterModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: colors.overlay50,
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: height * 0.8,
@@ -119,17 +125,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.gray500,
   },
   headerTitle: {
-    color: '#333333',
+    color: colors.gray900,
   },
   closeButton: {
     padding: 8,
   },
   closeButtonText: {
     fontSize: 20,
-    color: '#666666',
+    color: colors.gray700,
   },
   content: {
     padding: 20,
@@ -138,7 +144,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: colors.gray500,
   },
   cancelButton: {
     flex: 1,
@@ -146,11 +152,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#666666',
+    color: colors.gray700,
   },
   applyButton: {
     flex: 1,
@@ -158,11 +164,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     alignItems: 'center',
   },
   applyButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });
 

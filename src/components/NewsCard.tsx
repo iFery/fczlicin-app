@@ -7,6 +7,7 @@ import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import type { News } from '../types';
+import { colors } from '../theme/colors';
 
 interface NewsCardProps {
   news: News;
@@ -68,46 +69,46 @@ const NewsCard: React.FC<NewsCardProps> = ({ news, onPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     overflow: 'hidden',
     borderBottomWidth: 4,
-    borderBottomColor: '#014fa1',
+    borderBottomColor: colors.brandBlue,
   },
   image: {
     width: '100%',
     height: 200,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.gray400,
   },
   content: {
     padding: 16,
   },
   categoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
     marginBottom: 10,
   },
   categoryText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 11,
   },
   title: {
-    color: '#333333',
+    color: colors.gray900,
     marginBottom: 8,
     fontSize: 18,
     lineHeight: 24,
   },
   perex: {
-    color: '#666666',
+    color: colors.gray700,
     marginBottom: 12,
     fontSize: 14,
     lineHeight: 20,
   },
   date: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     fontSize: 12,
   },
 });

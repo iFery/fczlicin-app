@@ -7,7 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { preloadAllData, preloadCurrentSeasonData } from '../services/preloadService';
-import { hasAnyValidCache, getOldestCacheAge, loadFromCache, checkAndClearCacheOnVersionUpgrade } from '../utils/cacheManager';
+import { hasAnyValidCache, getOldestCacheAge, checkAndClearCacheOnVersionUpgrade } from '../utils/cacheManager';
 import { crashlyticsService } from '../services/crashlytics';
 import { initializeFirebase, ensureFirebaseInitialized } from '../services/firebase';
 import { remoteConfigService } from '../services/remoteConfig';
@@ -46,7 +46,6 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
   const [state, setState] = useState<BootstrapState>('loading');
   const [retryKey, setRetryKey] = useState(0);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [lastInternetState, setLastInternetState] = useState<boolean | null>(null);
 
   // Run bootstrap with proper cleanup and mounted checks
   useEffect(() => {
@@ -89,7 +88,6 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
           const cacheCleared = await checkAndClearCacheOnVersionUpgrade();
           if (cacheCleared) {
             crashlyticsService.log('cache_cleared_on_version_upgrade');
-          } else {
           }
         } catch (versionCheckError) {
           // Continue bootstrap even if version check fails
@@ -100,9 +98,6 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         if (!isMounted || abortController.signal.aborted) return;
         
         const isInternetReachable = netInfoState.isInternetReachable ?? false;
-        
-        // Store internet state for skipUpdate optimization
-        setLastInternetState(isInternetReachable);
         
         crashlyticsService.setAttribute('internet_reachable', String(isInternetReachable));
         crashlyticsService.log(`Internet reachable: ${isInternetReachable}`);
@@ -295,7 +290,6 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
       try {
         const netInfoState = await NetInfo.fetch();
         const isInternetReachable = netInfoState.isInternetReachable ?? false;
-        setLastInternetState(isInternetReachable);
         
         // Set state directly to ready without restarting bootstrap
         const readyState = isInternetReachable ? 'ready-online' : 'ready-offline';
@@ -360,4 +354,3 @@ export function useBootstrap(): BootstrapContextValue {
   }
   return context;
 }
-

@@ -2,18 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, typography } from '../theme/ThemeProvider';
-
-interface Player {
-  name: string;
-  minutes: number;
-  goals: number;
-  yellowCards: number;
-  redCards: number;
-}
+import type { Match, PlayerStat } from '../api/footballEndpoints';
+import { colors } from '../theme/colors';
 
 interface MatchPlayerStatsProps {
-  players: Player[];
-  match?: any; // Optional match prop to check if it's upcoming
+  players: PlayerStat[];
+  match?: Match; // Optional match prop to check if it's upcoming
 }
 
 const MatchPlayerStats: React.FC<MatchPlayerStatsProps> = ({ players, match }) => {
@@ -43,7 +37,7 @@ const MatchPlayerStats: React.FC<MatchPlayerStatsProps> = ({ players, match }) =
       <ScrollView style={styles.container}>
         <View style={styles.placeholderContainer}>
           <View style={styles.placeholderContent}>
-            <Ionicons name="stats-chart-outline" size={64} color="#CCCCCC" />
+            <Ionicons name="stats-chart-outline" size={64} color={colors.gray450} />
             <Text style={[styles.placeholderTitle, { fontFamily: typography.fontFamily.bold }]}>
               {upcoming ? 'Statistiky zatím nejsou k dispozici' : 'Statistiky hráčů nejsou k dispozici'}
             </Text>
@@ -102,14 +96,14 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderRadius: 8,
     marginBottom: 8,
   },
   headerCell: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: 'bold',
     fontSize: 14,
     textAlign: 'center',
@@ -124,7 +118,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.gray400,
   },
   cell: {
     fontSize: 14,
@@ -132,11 +126,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   placeholderContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 40,
     marginVertical: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -154,14 +148,14 @@ const styles = StyleSheet.create({
   },
   placeholderTitle: {
     fontSize: 20,
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   placeholderText: {
     fontSize: 16,
-    color: '#999999',
+    color: colors.gray600,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,

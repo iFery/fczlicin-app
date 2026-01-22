@@ -2,7 +2,7 @@
  * DebugScreen - Debug a diagnostické informace pro FC Zličín aplikaci
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,7 @@ import { CACHE_KEY_PATTERNS } from '../config/cacheConfig';
 import { useTeams } from '../hooks/useFootballData';
 import { isFirebaseReady, ensureFirebaseInitialized } from '../services/firebase';
 import firebase from '@react-native-firebase/app';
+import { colors } from '../theme/colors';
 
 interface CacheInfo {
   key: string;
@@ -63,28 +64,7 @@ export default function DebugScreen() {
   const [remoteConfigValues, setRemoteConfigValues] = useState<Record<string, string>>({});
   const [firebaseProjectId, setFirebaseProjectId] = useState<string>('Načítání...');
 
-  useEffect(() => {
-    loadDebugInfo();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      loadDebugInfo();
-    }, [])
-  );
-
-  const loadDebugInfo = async () => {
-    await Promise.all([
-      loadCacheInfo(),
-      loadAsyncStorageInfo(),
-      loadNotificationInfo(),
-      loadScheduledNotifications(),
-      loadRemoteConfig(),
-      loadFirebaseProjectId(),
-    ]);
-  };
-
-  const loadCacheInfo = async () => {
+  const loadCacheInfo = useCallback(async () => {
     const info: CacheInfo[] = await Promise.all(
       FOOTBALL_CACHE_KEYS.map(async (key) => {
         const age = await getCacheAge(key);
@@ -131,9 +111,9 @@ export default function DebugScreen() {
       console.error('Error loading cache info:', error);
       setCacheInfo(info);
     }
-  };
+  }, []);
 
-  const loadAsyncStorageInfo = async () => {
+  const loadAsyncStorageInfo = useCallback(async () => {
     try {
       const keys = await AsyncStorage.getAllKeys();
       setAsyncStorageKeysCount(keys.length);
@@ -150,9 +130,9 @@ export default function DebugScreen() {
     } catch (error) {
       console.error('Error loading AsyncStorage info:', error);
     }
-  };
+  }, []);
 
-  const loadNotificationInfo = async () => {
+  const loadNotificationInfo = useCallback(async () => {
     try {
       const { status } = await Notifications.getPermissionsAsync();
       setNotificationPermission(status);
@@ -162,9 +142,9 @@ export default function DebugScreen() {
     } catch (error) {
       setNotificationPermission('unknown');
     }
-  };
+  }, []);
 
-  const loadScheduledNotifications = async () => {
+  const loadScheduledNotifications = useCallback(async () => {
     try {
       const notifications = await Notifications.getAllScheduledNotificationsAsync();
       setScheduledNotifications(notifications);
@@ -172,18 +152,18 @@ export default function DebugScreen() {
       console.error('Error loading scheduled notifications:', error);
       setScheduledNotifications([]);
     }
-  };
+  }, []);
 
-  const loadRemoteConfig = async () => {
+  const loadRemoteConfig = useCallback(async () => {
     try {
       const all = remoteConfigService.getAll();
       setRemoteConfigValues(all);
     } catch (error) {
       console.error('Error loading Remote Config:', error);
     }
-  };
+  }, []);
 
-  const loadFirebaseProjectId = async () => {
+  const loadFirebaseProjectId = useCallback(async () => {
     try {
       await ensureFirebaseInitialized();
       if (isFirebaseReady()) {
@@ -197,7 +177,35 @@ export default function DebugScreen() {
       console.error('Error loading Firebase Project ID:', error);
       setFirebaseProjectId('Chyba při načítání');
     }
-  };
+  }, []);
+
+  const loadDebugInfo = useCallback(async () => {
+    await Promise.all([
+      loadCacheInfo(),
+      loadAsyncStorageInfo(),
+      loadNotificationInfo(),
+      loadScheduledNotifications(),
+      loadRemoteConfig(),
+      loadFirebaseProjectId(),
+    ]);
+  }, [
+    loadCacheInfo,
+    loadAsyncStorageInfo,
+    loadNotificationInfo,
+    loadScheduledNotifications,
+    loadRemoteConfig,
+    loadFirebaseProjectId,
+  ]);
+
+  useEffect(() => {
+    loadDebugInfo();
+  }, [loadDebugInfo]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDebugInfo();
+    }, [loadDebugInfo])
+  );
 
   const formatAge = (ageMs: number | null): string => {
     if (ageMs === null) return 'Není v cache';
@@ -290,7 +298,7 @@ export default function DebugScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="information-circle" size={22} color="#014fa1" />
+                <Ionicons name="information-circle" size={22} color={colors.brandBlue} />
               </View>
               <Text style={[globalStyles.heading, styles.sectionTitle]}>
                 Informace o aplikaci
@@ -300,7 +308,7 @@ export default function DebugScreen() {
               <InfoRow 
                 label="Firebase Project ID" 
                 value={firebaseProjectId}
-                valueColor={firebaseProjectId !== 'Načítání...' && !firebaseProjectId.includes('Není') && !firebaseProjectId.includes('Chyba') ? '#014fa1' : '#666666'}
+                valueColor={firebaseProjectId !== 'Načítání...' && !firebaseProjectId.includes('Není') && !firebaseProjectId.includes('Chyba') ? colors.brandBlue : colors.gray700}
               />
               <InfoRow label="Verze aplikace" value={appVersion} />
               <InfoRow label="Build číslo" value={String(buildNumber)} />
@@ -312,7 +320,7 @@ export default function DebugScreen() {
               <InfoRow 
                 label="Development" 
                 value={__DEV__ ? 'Ano' : 'Ne'}
-                valueColor={__DEV__ ? '#014fa1' : '#666666'}
+                valueColor={__DEV__ ? colors.brandBlue : colors.gray700}
               />
             </View>
           </View>
@@ -321,7 +329,7 @@ export default function DebugScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="pulse" size={22} color="#014fa1" />
+                <Ionicons name="pulse" size={22} color={colors.brandBlue} />
               </View>
               <Text style={[globalStyles.heading, styles.sectionTitle]}>
                 Stav aplikace
@@ -331,12 +339,12 @@ export default function DebugScreen() {
               <InfoRow 
                 label="Inicializováno" 
                 value={isInitialized ? 'Ano' : 'Ne'}
-                valueColor={isInitialized ? '#014fa1' : '#FF4444'}
+                valueColor={isInitialized ? colors.brandBlue : colors.errorLight}
               />
               <InfoRow 
                 label="Data načtena" 
                 value={isPreloaded ? 'Ano' : 'Ne'}
-                valueColor={isPreloaded ? '#014fa1' : '#FF4444'}
+                valueColor={isPreloaded ? colors.brandBlue : colors.errorLight}
               />
             </View>
           </View>
@@ -345,7 +353,7 @@ export default function DebugScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="wifi" size={22} color="#014fa1" />
+                <Ionicons name="wifi" size={22} color={colors.brandBlue} />
               </View>
               <Text style={[globalStyles.heading, styles.sectionTitle]}>
                 Síťové připojení
@@ -355,12 +363,12 @@ export default function DebugScreen() {
               <InfoRow 
                 label="Připojeno" 
                 value={networkStatus.isConnected ? 'Ano' : 'Ne'}
-                valueColor={networkStatus.isConnected ? '#014fa1' : '#FF4444'}
+                valueColor={networkStatus.isConnected ? colors.brandBlue : colors.errorLight}
               />
               <InfoRow 
                 label="Internet dostupný" 
                 value={networkStatus.isInternetReachable ? 'Ano' : 'Ne'}
-                valueColor={networkStatus.isInternetReachable ? '#014fa1' : '#FF4444'}
+                valueColor={networkStatus.isInternetReachable ? colors.brandBlue : colors.errorLight}
               />
               <InfoRow label="Typ připojení" value={networkStatus.type} />
             </View>
@@ -370,7 +378,7 @@ export default function DebugScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="archive" size={22} color="#014fa1" />
+                <Ionicons name="archive" size={22} color={colors.brandBlue} />
               </View>
               <Text style={[globalStyles.heading, styles.sectionTitle]}>
                 Cache
@@ -382,7 +390,7 @@ export default function DebugScreen() {
                   key={info.key}
                   label={info.key.length > 30 ? info.key.substring(0, 27) + '...' : info.key}
                   value={formatAge(info.age)}
-                  valueColor={info.exists ? '#014fa1' : '#999999'}
+                  valueColor={info.exists ? colors.brandBlue : colors.gray600}
                 />
               ))}
               {cacheInfo.length > 8 && (
@@ -395,7 +403,7 @@ export default function DebugScreen() {
               <InfoRow label="AsyncStorage klíčů" value={String(asyncStorageKeysCount)} />
               <InfoRow label="Velikost dat" value={formatSize(asyncStorageSize)} />
               <TouchableOpacity style={styles.actionButton} onPress={handleClearCache}>
-                <Ionicons name="trash-outline" size={18} color="#FFFFFF" style={styles.actionButtonIcon} />
+                <Ionicons name="trash-outline" size={18} color={colors.white} style={styles.actionButtonIcon} />
                 <Text style={styles.actionButtonText}>Vyčistit všechnu cache</Text>
               </TouchableOpacity>
             </View>
@@ -405,7 +413,7 @@ export default function DebugScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="notifications" size={22} color="#014fa1" />
+                <Ionicons name="notifications" size={22} color={colors.brandBlue} />
               </View>
               <Text style={[globalStyles.heading, styles.sectionTitle]}>
                 Notifikace
@@ -415,12 +423,12 @@ export default function DebugScreen() {
               <InfoRow 
                 label="OS oprávnění" 
                 value={notificationPermission}
-                valueColor={notificationPermission === 'granted' ? '#014fa1' : '#FF4444'}
+                valueColor={notificationPermission === 'granted' ? colors.brandBlue : colors.errorLight}
               />
               <InfoRow 
                 label="Push notifikace" 
                 value={pushNotificationsEnabled ? 'Zapnuto' : 'Vypnuto'}
-                valueColor={pushNotificationsEnabled ? '#014fa1' : '#999999'}
+                valueColor={pushNotificationsEnabled ? colors.brandBlue : colors.gray600}
               />
               <InfoRow 
                 label="Vybrané týmy" 
@@ -429,12 +437,12 @@ export default function DebugScreen() {
               <InfoRow 
                 label="Připomínka začátku" 
                 value={matchStartReminderEnabled ? 'Zapnuto' : 'Vypnuto'}
-                valueColor={matchStartReminderEnabled ? '#014fa1' : '#999999'}
+                valueColor={matchStartReminderEnabled ? colors.brandBlue : colors.gray600}
               />
               <InfoRow 
                 label="Notifikace výsledků" 
                 value={matchResultNotificationEnabled ? 'Zapnuto' : 'Vypnuto'}
-                valueColor={matchResultNotificationEnabled ? '#014fa1' : '#999999'}
+                valueColor={matchResultNotificationEnabled ? colors.brandBlue : colors.gray600}
               />
               <InfoRow label="Naplánované notifikace" value={String(scheduledNotifications.length)} />
               <InfoRow label="FCM Token" value={formatToken(fcmToken)} />
@@ -445,7 +453,7 @@ export default function DebugScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="football" size={22} color="#014fa1" />
+                <Ionicons name="football" size={22} color={colors.brandBlue} />
               </View>
               <Text style={[globalStyles.heading, styles.sectionTitle]}>
                 Fotbalová data
@@ -462,7 +470,7 @@ export default function DebugScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionIconContainer}>
-                  <Ionicons name="cloud" size={22} color="#014fa1" />
+                  <Ionicons name="cloud" size={22} color={colors.brandBlue} />
                 </View>
                 <Text style={[globalStyles.heading, styles.sectionTitle]}>
                   Remote Config
@@ -480,7 +488,7 @@ export default function DebugScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionIconContainer}>
-                <Ionicons name="bug" size={22} color="#014fa1" />
+                <Ionicons name="bug" size={22} color={colors.brandBlue} />
               </View>
               <Text style={[globalStyles.heading, styles.sectionTitle]}>
                 Crashlytics
@@ -488,7 +496,7 @@ export default function DebugScreen() {
             </View>
             <View style={styles.infoCard}>
               <TouchableOpacity style={styles.crashButton} onPress={handleTestCrash}>
-                <Ionicons name="warning" size={18} color="#FFFFFF" style={styles.actionButtonIcon} />
+                <Ionicons name="warning" size={18} color={colors.white} style={styles.actionButtonIcon} />
                 <Text style={styles.crashButtonText}>Vyvolat testovací crash</Text>
               </TouchableOpacity>
             </View>
@@ -505,7 +513,7 @@ interface InfoRowProps {
   valueColor?: string;
 }
 
-function InfoRow({ label, value, valueColor = '#333333' }: InfoRowProps) {
+function InfoRow({ label, value, valueColor = colors.gray900 }: InfoRowProps) {
   const { globalStyles } = useTheme();
   
   return (
@@ -521,7 +529,7 @@ function InfoRow({ label, value, valueColor = '#333333' }: InfoRowProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   scrollView: {
     flex: 1,
@@ -544,21 +552,21 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(1, 79, 161, 0.1)',
+    backgroundColor: colors.brandBlueLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sectionTitle: {
-    color: '#333333',
+    color: colors.gray900,
     fontSize: 20,
     fontWeight: '700',
   },
   infoCard: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.gray500,
   },
   infoRow: {
     flexDirection: 'row',
@@ -566,11 +574,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
+    borderBottomColor: colors.gray475,
   },
   infoLabel: {
     fontSize: 14,
-    color: '#666666',
+    color: colors.gray700,
     flex: 1,
   },
   infoValue: {
@@ -582,11 +590,11 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.gray500,
     marginVertical: 8,
   },
   actionButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     padding: 14,
     marginTop: 12,
     borderRadius: 12,
@@ -598,13 +606,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 15,
     fontWeight: '600',
     fontFamily: 'Rajdhani-SemiBold',
   },
   crashButton: {
-    backgroundColor: '#FF4444',
+    backgroundColor: colors.errorLight,
     padding: 14,
     borderRadius: 12,
     flexDirection: 'row',
@@ -612,7 +620,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   crashButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 15,
     fontWeight: '600',
     fontFamily: 'Rajdhani-SemiBold',

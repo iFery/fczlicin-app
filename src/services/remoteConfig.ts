@@ -140,14 +140,14 @@ class RemoteConfigService {
   /**
    * Získá všechny hodnoty z Remote Config
    */
-  getAll(): Record<string, any> {
+  getAll(): Record<string, string> {
     try {
       if (!isFirebaseReady()) {
         console.warn('Remote Config: Firebase not ready, returning empty object');
         return {};
       }
       const all = remoteConfig().getAll();
-      const result: Record<string, any> = {};
+      const result: Record<string, string> = {};
       
       Object.keys(all).forEach((key) => {
         const value = all[key];
@@ -166,4 +166,3 @@ class RemoteConfigService {
 }
 
 export const remoteConfigService = new RemoteConfigService();
-

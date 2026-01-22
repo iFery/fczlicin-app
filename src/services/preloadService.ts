@@ -32,7 +32,7 @@ export async function preloadAllData(
 ): Promise<{ success: boolean; errors: string[] }> {
   const errors: string[] = [];
   // Festival-related tasks removed - app now uses football API with different caching strategy
-  const tasks: Array<{ name: string; key: string; fn: () => Promise<any> }> = [];
+  const tasks: Array<{ name: string; key: string; fn: () => Promise<unknown> }> = [];
 
   const total = tasks.length;
   
@@ -65,8 +65,6 @@ export async function preloadAllData(
 
   // Performance optimization: Load all data in parallel instead of sequentially
   // This reduces startup time by 3-5x on good networks
-  const startTime = Date.now();
-
   // Execute all preload tasks in parallel
   const taskPromises = tasks.map(async (task) => {
     try {
@@ -296,5 +294,3 @@ export async function preloadCurrentSeasonData(): Promise<{ success: boolean; er
     return { success: false, errors: [errorMessage] };
   }
 }
-
-

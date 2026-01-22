@@ -12,6 +12,8 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +23,9 @@ import NewsCard from '../components/NewsCard';
 import { usePaginatedNews } from '../hooks/usePaginatedNews';
 import { useTheme } from '../theme/ThemeProvider';
 import type { News } from '../types';
+import { colors } from '../theme/colors';
+import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
 
 type NewsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -45,6 +50,7 @@ export default function NewsScreen() {
     navigation.navigate('NewsDetail', {
       newsId: newsItem.id,
       newsTitle: newsItem.title,
+      source: 'news_list',
     });
   }, [navigation]);
 
@@ -59,15 +65,22 @@ export default function NewsScreen() {
   );
 
   // Infinite scroll handler
+  const handleLoadMore = useCallback(() => {
+    analyticsService.logEvent(AnalyticsEvent.NEWS_LOAD_MORE, {
+      source: 'news_list',
+    });
+    loadMore();
+  }, [loadMore]);
+
   const handleEndReached = useCallback(() => {
     if (hasMore && !loadingMore && !loading) {
-      loadMore();
+      handleLoadMore();
     }
-  }, [hasMore, loadingMore, loading, loadMore]);
+  }, [hasMore, loadingMore, loading, handleLoadMore]);
 
   // Scroll handler for infinite scroll (load when 70% scrolled)
   const handleScroll = useCallback(
-    (event: any) => {
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
       const scrollPosition = (layoutMeasurement.height + contentOffset.y) / contentSize.height;
       
@@ -86,7 +99,7 @@ export default function NewsScreen() {
     if (loadingMore) {
       return (
         <View style={styles.footerContainer}>
-          <ActivityIndicator size="small" color="#014fa1" />
+          <ActivityIndicator size="small" color={colors.brandBlue} />
           <Text style={[globalStyles.caption, styles.loadingMoreText]}>
             Načítání dalších novinek...
           </Text>
@@ -109,20 +122,20 @@ export default function NewsScreen() {
         <View style={styles.footerContainer}>
           <TouchableOpacity
             style={styles.loadMoreButton}
-            onPress={loadMore}
+            onPress={handleLoadMore}
             activeOpacity={0.7}
           >
             <Text style={[globalStyles.button, styles.loadMoreButtonText]}>
               Načíst další novinky
             </Text>
-            <Ionicons name="arrow-down" size={16} color="#FFFFFF" style={styles.loadMoreIcon} />
+            <Ionicons name="arrow-down" size={16} color={colors.white} style={styles.loadMoreIcon} />
           </TouchableOpacity>
         </View>
       );
     }
 
     return null;
-  }, [loadingMore, hasMore, news.length, loadMore, globalStyles]);
+  }, [loadingMore, hasMore, news.length, handleLoadMore, globalStyles]);
 
   // Memoized empty/error component
   const listEmptyComponent = useMemo(() => {
@@ -133,11 +146,16 @@ export default function NewsScreen() {
     if (error) {
       return (
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle" size={48} color="#DC3545" />
+          <Ionicons name="alert-circle" size={48} color={colors.error} />
           <Text style={[globalStyles.text, styles.errorText]}>{error}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={refresh}
+            onPress={() => {
+              analyticsService.logEvent(AnalyticsEvent.NEWS_REFRESH, {
+                source: 'news_list',
+              });
+              refresh();
+            }}
             activeOpacity={0.7}
           >
             <Text style={[globalStyles.button, styles.retryButtonText]}>
@@ -150,7 +168,7 @@ export default function NewsScreen() {
 
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="newspaper-outline" size={48} color="#666666" />
+        <Ionicons name="newspaper-outline" size={48} color={colors.gray700} />
         <Text style={[globalStyles.text, styles.emptyText]}>
           Žádné novinky nejsou k dispozici
         </Text>
@@ -161,7 +179,7 @@ export default function NewsScreen() {
   if (loading && news.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#014fa1" />
+        <ActivityIndicator size="large" color={colors.brandBlue} />
         <Text style={[globalStyles.caption, styles.loadingText]}>
           Načítání novinek...
         </Text>
@@ -201,16 +219,16 @@ export default function NewsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   loadingText: {
-    color: '#666666',
+    color: colors.gray700,
     marginTop: 16,
   },
   content: {
@@ -226,26 +244,26 @@ const styles = StyleSheet.create({
     minHeight: 300,
   },
   errorText: {
-    color: '#DC3545',
+    color: colors.error,
     textAlign: 'center',
     marginVertical: 20,
     fontSize: 16,
   },
   emptyText: {
-    color: '#666666',
+    color: colors.gray700,
     textAlign: 'center',
     marginTop: 16,
     fontSize: 16,
   },
   retryButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 16,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
   },
   footerContainer: {
@@ -255,29 +273,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingMoreText: {
-    color: '#014fa1',
+    color: colors.brandBlue,
     marginTop: 12,
   },
   endText: {
-    color: '#666666',
+    color: colors.gray700,
     textAlign: 'center',
   },
   loadMoreButton: {
-    backgroundColor: '#014fa1',
+    backgroundColor: colors.brandBlue,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   loadMoreButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '600',
     marginRight: 8,
   },
@@ -285,5 +303,3 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-
-

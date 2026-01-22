@@ -1,16 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useMatchDetail, useMatchPlayerStats, useRoundResults, useTeams } from '../hooks/useFootballData';
+import { useRoute, RouteProp } from '@react-navigation/native';
+import { useMatchDetail, useMatchPlayerStats, useRoundResults } from '../hooks/useFootballData';
 import { LoadingSpinner, ErrorView, TabView, MatchCard, MatchDetails, MatchPlayerStats, RoundResults } from '../components/index';
 import { useTheme } from '../theme/ThemeProvider';
+import type { RootStackParamList } from '../navigation/linking';
+import { colors } from '../theme/colors';
+import { analyticsService } from '../services/analytics';
+import { AnalyticsEvent } from '../services/analyticsEvents';
 
-const MatchDetailScreen: React.FC = ({ route }: any) => {
-  const { matchId, teamName } = route.params || {};
-  const { data: match, loading: matchLoading, error: matchError } = useMatchDetail(parseInt(matchId));
-  const { data: playerStats, loading: statsLoading, error: statsError } = useMatchPlayerStats(parseInt(matchId));
-  const { data: roundResults, loading: roundLoading, error: roundError } = useRoundResults(parseInt(matchId));
-  const { data: teams } = useTeams();
+type MatchDetailRouteProp = RouteProp<RootStackParamList, 'MatchDetail'>;
+
+const MatchDetailScreen: React.FC = () => {
+  const route = useRoute<MatchDetailRouteProp>();
+  const { matchId, teamName, source } = route.params;
+  const matchIdNum = parseInt(matchId, 10);
+  const { data: match, loading: matchLoading, error: matchError } = useMatchDetail(matchIdNum);
+  const { data: playerStats, loading: statsLoading, error: statsError } = useMatchPlayerStats(matchIdNum);
+  const { data: roundResults, loading: roundLoading, error: roundError } = useRoundResults(matchIdNum);
   const { globalStyles } = useTheme();
+
+  useEffect(() => {
+    analyticsService.logEvent(AnalyticsEvent.MATCH_OPEN, {
+      match_id: matchId,
+      source: source || 'unknown',
+    });
+  }, [matchId, source]);
 
   // Try to get team name from route params, or from teams list based on match competition
   const getDisplayTeamName = (): string | undefined => {
@@ -39,20 +54,24 @@ const MatchDetailScreen: React.FC = ({ route }: any) => {
   }
 
   const tabs = [
-    {
-      key: 'details',
-      title: 'Detail zápasu',
-      component: <MatchDetails match={match} />
-    },
+    ...(match
+      ? [
+          {
+            key: 'details',
+            title: 'Detail zápasu',
+            component: <MatchDetails match={match} />,
+          },
+        ]
+      : []),
     {
       key: 'stats',
       title: 'Statistiky',
-      component: <MatchPlayerStats players={playerStats?.players || []} match={match} />
+      component: <MatchPlayerStats players={playerStats.players} match={match ?? undefined} />
     },
     {
       key: 'round',
       title: 'Další zápasy',
-      component: <RoundResults matches={(roundResults as any)?.matches || []} currentMatchId={parseInt(matchId)} />
+      component: <RoundResults matches={roundResults.matches} currentMatchId={matchIdNum} />
     }
   ];
 
@@ -67,10 +86,10 @@ const MatchDetailScreen: React.FC = ({ route }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.gray300,
   },
   errorText: {
-    color: '#FF0000',
+    color: colors.errorText,
     textAlign: 'center',
     marginTop: 50,
   },

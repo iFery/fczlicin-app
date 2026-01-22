@@ -17,6 +17,8 @@ import { UpdateScreen } from './src/screens/UpdateScreen';
 import { NotificationPermissionScreen } from './src/screens/NotificationPermissionScreen';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { useNotificationPromptStore } from './src/stores/notificationPromptStore';
+import { analyticsService } from './src/services/analytics';
+import { AnalyticsEvent } from './src/services/analyticsEvents';
 
 const FADE_DURATION = 300;
 
@@ -45,6 +47,7 @@ function AppContent() {
   const [showNotificationScreen, setShowNotificationScreen] = useState(false);
   const loadingStartTime = useRef<number | null>(null);
   const appFadeInTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const appOpenTrackedRef = useRef(false);
   
   // Notification permission screen state
   const { shouldShowPrompt } = useNotificationPromptStore();
@@ -113,6 +116,15 @@ function AppContent() {
       loadingStartTime.current = Date.now();
     }
   }, [isLoading]);
+
+  useEffect(() => {
+    if (showApp && !appOpenTrackedRef.current) {
+      analyticsService.logEvent(AnalyticsEvent.APP_OPEN, {
+        source: 'app_icon',
+      });
+      appOpenTrackedRef.current = true;
+    }
+  }, [showApp]);
 
   // Show notification permission screen when app is ready (before main app)
   // This has PRIORITY over app fade-in - check this FIRST
