@@ -31,7 +31,7 @@ const withAndroidAdIdPermission = (config) => {
     );
 
     if (!hasAdIdPermission) {
-      console.log('📝 Adding AD_ID permission to AndroidManifest.xml...');
+      //console.log('📝 Adding AD_ID permission to AndroidManifest.xml...');
       
       // Add the permission
       permissions.push({
@@ -40,9 +40,9 @@ const withAndroidAdIdPermission = (config) => {
         },
       });
       
-      console.log('✅ AD_ID permission added to AndroidManifest.xml');
+      //console.log('✅ AD_ID permission added to AndroidManifest.xml');
     } else {
-      console.log('✅ AD_ID permission already exists in AndroidManifest.xml');
+      //console.log('✅ AD_ID permission already exists in AndroidManifest.xml');
     }
 
     return modConfig;

@@ -38,7 +38,7 @@ class RemoteConfigService {
       if (!skipFetch) {
         await this.fetchAndActivate();
       } else {
-        console.log('Remote Config initialized with defaults only (skipping fetch)');
+        //console.log('Remote Config initialized with defaults only (skipping fetch)');
       }
     } catch (error) {
       console.error('Error initializing Remote Config:', error);
@@ -63,7 +63,6 @@ class RemoteConfigService {
       
       await remoteConfig().fetch();
       const activated = await remoteConfig().activate();
-      console.log('Remote Config activated:', activated);
       return activated;
     } catch (error) {
       console.error('Error fetching Remote Config:', error);

@@ -3,6 +3,7 @@ import { View, StyleSheet, StatusBar, Animated, Image, Easing, Platform } from '
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
+import * as NavigationBar from 'expo-navigation-bar';
 import {
   Rajdhani_400Regular,
   Rajdhani_500Medium,
@@ -46,13 +47,17 @@ function AppContent() {
   const [showUpdateScreen, setShowUpdateScreen] = useState(false);
   const [showNotificationScreen, setShowNotificationScreen] = useState(false);
   const loadingStartTime = useRef<number | null>(null);
-  const appFadeInTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const appFadeInTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appOpenTrackedRef = useRef(false);
   
   // Notification permission screen state
   const { shouldShowPrompt } = useNotificationPromptStore();
 
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#FFFFFF');
+      NavigationBar.setButtonStyleAsync('dark');
+    }
   }, []);
 
   const isLoading = state === 'loading';
@@ -144,7 +149,7 @@ function AppContent() {
           
           if (actualPermissionStatus === 'granted') {
             // Permission already granted, don't show prompt
-            console.log('Notification permission already granted, skipping prompt');
+            //console.log('Notification permission already granted, skipping prompt');
             return;
           }
         }

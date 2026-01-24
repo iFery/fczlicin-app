@@ -202,6 +202,7 @@ module.exports = ({ config }) => {
         favicon: './assets/favicon.png',
       },
       plugins: [
+        'expo-router',
         'expo-asset',
         [
           'expo-font',
@@ -218,11 +219,11 @@ module.exports = ({ config }) => {
           'expo-build-properties',
           {
             android: {
-              // Google Play requirement: targetSdkVersion 35 (Android 15) from August 31, 2025
-              compileSdkVersion: 35,
-              targetSdkVersion: 35, // KRITICKÉ - požadavek Google Play
-              buildToolsVersion: '35.0.0',
-              minSdkVersion: 24, // Expo SDK 52 default (was 23 in SDK 51)
+              // Expo SDK 54 defaults to API 36 (Android 16)
+              compileSdkVersion: 36,
+              targetSdkVersion: 36,
+              buildToolsVersion: '36.0.0',
+              minSdkVersion: 24, // Expo SDK 54 default
             },
             ios: {
               // Force Objective-C AppDelegate for Firebase compatibility
@@ -267,4 +268,3 @@ module.exports = ({ config }) => {
     },
   };
 };
-

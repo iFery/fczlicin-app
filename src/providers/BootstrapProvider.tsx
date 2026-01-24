@@ -97,10 +97,22 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         const netInfoState = await NetInfo.fetch();
         if (!isMounted || abortController.signal.aborted) return;
         
-        const isInternetReachable = netInfoState.isInternetReachable ?? false;
-        
+        // NetInfo on iOS can report isInternetReachable as null even when online.
+        // Treat "unknown" as online and only mark offline when we have an explicit false.
+        const isOffline =
+          netInfoState.isConnected === false || netInfoState.isInternetReachable === false;
+        const isInternetReachable = !isOffline;
+
         crashlyticsService.setAttribute('internet_reachable', String(isInternetReachable));
-        crashlyticsService.log(`Internet reachable: ${isInternetReachable}`);
+        crashlyticsService.setAttribute('netinfo_isConnected', String(netInfoState.isConnected));
+        crashlyticsService.setAttribute(
+          'netinfo_isInternetReachable',
+          String(netInfoState.isInternetReachable)
+        );
+        crashlyticsService.setAttribute('netinfo_type', String(netInfoState.type));
+        crashlyticsService.log(
+          `NetInfo: connected=${netInfoState.isConnected}, reachable=${netInfoState.isInternetReachable}, type=${netInfoState.type}`
+        );
 
         // Initialize Remote Config (skip fetch if no internet)
         try {
@@ -116,9 +128,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         // Only check if online (offline mode should not block app)
         if (isInternetReachable) {
           try {
-            console.log('🚀 [BootstrapProvider] Checking for app updates...');
             const updateCheckResult = await checkForUpdate();
-            console.log('🚀 [BootstrapProvider] Update check result:', updateCheckResult);
             if (!isMounted || abortController.signal.aborted) return;
             
             // Check if user has skipped this version
@@ -128,25 +138,19 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
             setUpdateInfo(updateCheckResult);
             
             if (updateCheckResult.type === 'forced') {
-              console.log('🚀 [BootstrapProvider] Forced update required, blocking app');
               crashlyticsService.log('bootstrap_blocked_by_forced_update');
               setState('update-required');
               return; // Stop bootstrap, show update screen (cannot skip forced updates)
             } else if (updateCheckResult.type === 'optional' && !isSkipped) {
-              console.log('🚀 [BootstrapProvider] Optional update available, showing update screen');
               crashlyticsService.log('bootstrap_optional_update_available');
               setState('update-optional');
               return; // Stop bootstrap, show update screen (user can skip)
             }
-            console.log('🚀 [BootstrapProvider] No update needed, continuing bootstrap');
             // Continue with normal bootstrap if no update needed or update was skipped
           } catch (updateError) {
-            console.error('❌ [BootstrapProvider] Update check error:', updateError);
             crashlyticsService.recordError(updateError instanceof Error ? updateError : new Error('Update check failed'));
             // Continue with bootstrap even if update check fails
           }
-        } else {
-          console.log('🚀 [BootstrapProvider] Offline, skipping update check');
         }
 
         // Setup notifications (only listeners, don't request permission here)

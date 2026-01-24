@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { NavigationContainer, LinkingOptions, type NavigationState, type PartialState } from '@react-navigation/native';
 import TabNavigator from './TabNavigator';
 import { linking, type RootStackParamList } from './linking';
@@ -34,16 +34,6 @@ export function navigate(
 
 export default function AppNavigator() {
   const routeNameRef = useRef<string | undefined>(undefined);
-
-  // Mark navigation as ready when container is mounted
-  useEffect(() => {
-    // Small delay to ensure navigation container is fully initialized
-    const timer = setTimeout(() => {
-      navigationQueue.setReady();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleReady = () => {
     // Navigation container is ready, drain any queued actions

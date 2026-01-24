@@ -68,6 +68,7 @@ describe('BootstrapProvider - Integration Tests', () => {
       // Setup: offline, no cache
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: false,
+        isConnected: false,
       } as any);
       mockedHasAnyValidCache.mockResolvedValue(false);
 
@@ -91,6 +92,7 @@ describe('BootstrapProvider - Integration Tests', () => {
       // Setup: offline, cache exists
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: false,
+        isConnected: false,
       } as any);
       mockedHasAnyValidCache.mockResolvedValue(true);
       mockedGetOldestCacheAge.mockResolvedValue(1000 * 60 * 60);
@@ -115,6 +117,7 @@ describe('BootstrapProvider - Integration Tests', () => {
       // Setup: online, fetch succeeds and creates cache
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: true,
+        isConnected: true,
       } as any);
       // First call: no cache before fetch, second call: cache exists after fetch
       mockedHasAnyValidCache
@@ -147,6 +150,7 @@ describe('BootstrapProvider - Integration Tests', () => {
       // Setup: online, fetch succeeds and creates cache
       mockedNetInfo.fetch.mockResolvedValue({
         isInternetReachable: true,
+        isConnected: true,
       } as any);
       // First call: no cache before fetch, second call: cache exists after fetch
       mockedHasAnyValidCache
@@ -181,6 +185,7 @@ describe('BootstrapProvider - Integration Tests', () => {
         fetchCallCount += 1;
         return Promise.resolve({
           isInternetReachable: fetchCallCount === 1 ? false : true,
+          isConnected: fetchCallCount === 1 ? false : true,
         } as any);
       });
       mockedHasAnyValidCache.mockResolvedValue(false);

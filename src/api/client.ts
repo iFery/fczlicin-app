@@ -64,7 +64,7 @@ class ApiClient {
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       const controller = new AbortController();
-      let timeoutId: NodeJS.Timeout | undefined;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       
       try {
         timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -192,4 +192,3 @@ class ApiClient {
 
 // Export singleton instance
 export const apiClient = new ApiClient();
-

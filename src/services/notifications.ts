@@ -24,6 +24,8 @@ function getCurrentEnvironment(): string {
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -128,7 +130,6 @@ class NotificationService {
       // Zkontroluje oprávnění (nepožádá)
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Notification permission not granted, skipping token');
         return null;
       }
 
@@ -139,7 +140,6 @@ class NotificationService {
       
       if (token) {
         this.fcmToken = token;
-        console.log('FCM Token:', token);
         return token;
       } else {
         console.warn('Failed to get FCM token after retries');
@@ -191,7 +191,6 @@ class NotificationService {
       // Použijeme safeMessagingCall pro bezpečné nastavení listeneru
       const unsubscribe = await safeMessagingCall((msg) => {
         return msg.onMessage(async (remoteMessage) => {
-          console.log('Foreground notification received:', remoteMessage);
           
           // Zajisti, že notification channel existuje
           await this.ensureNotificationChannel();
@@ -221,7 +220,6 @@ class NotificationService {
     // Works for both foreground and background/closed app states
     const notificationListener = Notifications.addNotificationResponseReceivedListener((response) => {
       try {
-        console.log('Notification tapped:', response);
         
         // Obranná kontrola - zkontroluj, že response a notification existují
         if (!response || !response.notification || !response.notification.request) {
@@ -254,7 +252,6 @@ class NotificationService {
     try {
       const lastNotificationResponse = await Notifications.getLastNotificationResponseAsync();
       if (lastNotificationResponse) {
-        console.log('App opened by notification tap:', lastNotificationResponse);
         
         // Obranná kontrola - zkontroluj, že notification a request existují
         if (!lastNotificationResponse.notification || !lastNotificationResponse.notification.request) {
@@ -337,7 +334,6 @@ class NotificationService {
           seconds: seconds,
         },
       });
-      console.log(`Test notification scheduled for ${seconds} seconds`);
     } catch (error) {
       console.error('Error scheduling test notification:', error);
       crashlyticsService.recordError(error as Error);
@@ -419,7 +415,6 @@ class NotificationService {
       });
 
       if (result.success) {
-        console.log('Device token registered successfully with preferences');
         return true;
       } else {
         console.warn('Device token registration returned failure:', result.message);
@@ -460,7 +455,6 @@ class NotificationService {
       });
 
       if (result.success) {
-        console.log('Notification preferences updated successfully');
         return true;
       } else {
         console.warn('Notification preferences update returned failure:', result.message);
@@ -486,7 +480,6 @@ class NotificationService {
 
       const result = await notificationApi.unregisterDeviceToken(token);
       if (result.success) {
-        console.log('Device token unregistered successfully');
         return true;
       } else {
         console.warn('Device token unregistration returned failure:', result.message);
@@ -652,11 +645,9 @@ class NotificationService {
     forceReschedule: boolean = false
   ): Promise<number> {
     try {
-      console.log(`[scheduleNotificationsForFavoriteTeams] Called with teams: ${favoriteTeamIds}, enabled: ${matchStartReminderEnabled}, force: ${forceReschedule}`);
       
       // Pokud jsou notifikace vypnuté, zruš všechny match notifikace
       if (!matchStartReminderEnabled || favoriteTeamIds.length === 0) {
-        console.log('[scheduleNotificationsForFavoriteTeams] Notifications disabled or no teams, cancelling all');
         await this.cancelMatchNotifications();
         this.lastMatchHashes.clear();
         return 0;
@@ -665,7 +656,6 @@ class NotificationService {
       // Zkontroluj permission
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== 'granted') {
-        console.warn('[scheduleNotificationsForFavoriteTeams] Permission not granted');
         await this.cancelMatchNotifications();
         this.lastMatchHashes.clear();
         return 0;
@@ -674,7 +664,6 @@ class NotificationService {
       // Získej aktuální sezónu
       const currentSeasonId = await getCurrentSeason();
       if (!currentSeasonId) {
-        console.warn('[scheduleNotificationsForFavoriteTeams] No current season');
         return 0;
       }
 
@@ -690,7 +679,6 @@ class NotificationService {
 
           const lastHash = this.lastMatchHashes.get(teamId);
           if (lastHash !== hash) {
-            console.log(`[scheduleNotificationsForFavoriteTeams] Hash changed for team ${teamId}`);
             needsReschedule = true;
           }
         } catch (error) {
@@ -700,11 +688,9 @@ class NotificationService {
 
       // Pokud se nic nezměnilo, není potřeba přeplánovávat
       if (!needsReschedule && this.lastMatchHashes.size > 0) {
-        console.log('[scheduleNotificationsForFavoriteTeams] No changes detected, skipping reschedule');
         return 0;
       }
       
-      console.log('[scheduleNotificationsForFavoriteTeams] Rescheduling notifications...');
 
       // Zruš staré notifikace (pokud se změnilo nebo pokud to je první naplánování)
       await this.cancelMatchNotifications();

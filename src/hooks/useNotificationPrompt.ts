@@ -30,7 +30,7 @@ export function useNotificationPrompt(
   const [showPrompt, setShowPrompt] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
   const { setPromptShown, shouldShowPrompt } = useNotificationPromptStore();
-  const timeRef = useRef<NodeJS.Timeout | null>(null);
+  const timeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollDetectedRef = useRef(false);
   const hasShownRef = useRef(false);
 

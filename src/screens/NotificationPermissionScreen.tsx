@@ -275,7 +275,7 @@ export function NotificationPermissionScreen({ onComplete }: NotificationPermiss
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.brandBlueDark, // FC Zličín blue
+    backgroundColor: colors.brandBlue, // FC Zličín blue
   },
   content: {
     flex: 1,
@@ -293,14 +293,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: colors.overlayWhite15,
+    width: 250,
+    height: 250,
   },
   icon: {
-    width: 200,
-    height: 200,
+    width: 250,
+    height: 250,
   },
   title: {
     fontFamily: typography.fontFamily.bold,

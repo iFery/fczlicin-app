@@ -32,7 +32,6 @@ class DeepLinkService {
     try {
       const initialUrl = await Linking.getInitialURL();
       if (initialUrl) {
-        console.log('[DeepLinkService] Initial URL:', initialUrl);
         // Wait a bit for navigation to be ready, then process
         setTimeout(() => {
           this.handleDeepLink(initialUrl);
@@ -52,7 +51,6 @@ class DeepLinkService {
    */
   private setupURLListener(): void {
     this.urlListener = Linking.addEventListener('url', (event) => {
-      console.log('[DeepLinkService] Deep link received:', event.url);
       this.handleDeepLink(event.url);
     });
   }
