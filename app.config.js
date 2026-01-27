@@ -176,7 +176,7 @@ module.exports = ({ config }) => {
       icon: './assets/icon.png',
       userInterfaceStyle: 'light',
       splash: {
-        image: './assets/fc-zlicin-logo.jpg',
+        image: './assets/splash.png',
         resizeMode: 'contain',
         backgroundColor: '#014fa1',
       },
@@ -193,8 +193,12 @@ module.exports = ({ config }) => {
         },
         package: 'cz.fczlicin.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 17, // Increment this for each release to Google Play
+        versionCode: 18, // Increment this for each release to Google Play
         permissions: [
+          // Keep Expo defaults for scheduling local notifications in release builds
+          'android.permission.POST_NOTIFICATIONS',
+          'android.permission.WAKE_LOCK',
+          'android.permission.RECEIVE_BOOT_COMPLETED',
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],
       },

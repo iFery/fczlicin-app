@@ -76,7 +76,7 @@ function parseWhatsNew(value: string): string[] {
   // Fallback to default
   return [
     'Rychlejší a stabilnější aplikace',
-    'Vylepšený program a přehled interpretů',
+    'Vylepšený přehled zápasů a statistik',
     'Opravy drobných chyb',
   ];
 }
@@ -161,17 +161,9 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
  * Get store URL for the current platform
  */
 function getStoreUrl(): string {
-  if (Platform.OS === 'ios') {
-    // App Store URL format: https://apps.apple.com/app/id{APP_ID}
-    // App Store ID is unique per app and same across all regions/languages
-    // TODO: Aktualizovat na správné App Store ID pro FC Zličín aplikaci
-    const APP_STORE_ID = '6747171420';
-    return `https://apps.apple.com/app/id${APP_STORE_ID}`;
-  } else {
-    // Google Play Store URL format: https://play.google.com/store/apps/details?id={PACKAGE_NAME}
-    const bundleId = Constants.expoConfig?.android?.package || 'cz.fczlicin.app';
-    return `https://play.google.com/store/apps/details?id=${bundleId}`;
-  }
+  const APP_STORE_URL = 'https://apps.apple.com/cz/app/fc-zli%C4%8D%C3%ADn/id6748696119?l=cs';
+  const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=cz.fczlicin.app&hl=cs';
+  return Platform.OS === 'ios' ? APP_STORE_URL : PLAY_STORE_URL;
 }
 
 /**

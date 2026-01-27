@@ -12,6 +12,8 @@
     "build:android": "eas build --platform android",
     "build:ios": "eas build --platform ios",
     "build:all": "eas build --platform all",
+    "build:apk": "APP_ENV=production NODE_ENV=production npx expo prebuild --platform android && cd android && APP_ENV=production NODE_ENV=production ./gradlew assembleRelease",
+    "install:apk": "adb install -r android/app/build/outputs/apk/release/app-release.apk",
     "build:aab": "APP_ENV=production NODE_ENV=production npx expo prebuild --platform android && cd android && APP_ENV=production NODE_ENV=production ./gradlew bundleRelease",
     "build:ios:prod": "APP_ENV=production NODE_ENV=production npx expo prebuild --platform ios",
     "build:aab:clean": "APP_ENV=production NODE_ENV=production npx expo prebuild --clean --platform android && cd android && APP_ENV=production NODE_ENV=production ./gradlew bundleRelease",

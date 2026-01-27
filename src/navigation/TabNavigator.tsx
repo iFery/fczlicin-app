@@ -11,6 +11,7 @@ import MatchDetailScreen from '../screens/MatchDetailScreen';
 import StandingsScreen from '../screens/StandingsScreen';
 import TeamListScreen from '../screens/TeamListScreen';
 import InfoScreen from '../screens/InfoScreen';
+import AboutScreen from '../screens/AboutScreen';
 import PlayerDetailScreen from '../screens/PlayerDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import NewsScreen from '../screens/NewsScreen';
@@ -222,6 +223,18 @@ function InfoStack() {
         options={{ 
           headerShown: true, 
           title: 'Více',
+          headerStyle: { backgroundColor: colors.brandBlue },
+          headerTintColor: colors.white,
+          headerTitleStyle: { color: colors.white },
+          headerTitleAlign: 'center',
+        }} 
+      />
+      <Stack.Screen 
+        name="About" 
+        component={AboutScreen}
+        options={{ 
+          headerShown: true,
+          title: 'O aplikaci',
           headerStyle: { backgroundColor: colors.brandBlue },
           headerTintColor: colors.white,
           headerTitleStyle: { color: colors.white },

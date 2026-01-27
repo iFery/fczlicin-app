@@ -8,6 +8,7 @@ import {
   ScrollView,
   Dimensions 
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeProvider';
 import SelectBox from './SelectBox';
 import { useSeasons, useTeams } from '../hooks/useFootballData';
@@ -35,6 +36,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
   const [localSelectedSeason, setLocalSelectedSeason] = useState(selectedSeason);
   const [localSelectedTeam, setLocalSelectedTeam] = useState(selectedTeam);
   const { globalStyles } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const { data: seasons } = useSeasons();
   const { data: teams } = useTeams();
@@ -63,6 +65,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
       transparent={true}
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
@@ -93,7 +96,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
             />
           </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
             <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
               <Text style={[globalStyles.button, styles.cancelButtonText]}>Zrušit</Text>
             </TouchableOpacity>
@@ -145,6 +148,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: colors.gray500,
+    marginBottom: 10,
   },
   cancelButton: {
     flex: 1,

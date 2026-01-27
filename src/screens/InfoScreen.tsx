@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,10 +14,12 @@ interface InfoMenuItem {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
 export default function InfoScreen() {
   const navigation = useNavigation<InfoScreenNavigationProp>();
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const menuItems: InfoMenuItem[] = [
     {
@@ -27,22 +29,10 @@ export default function InfoScreen() {
       onPress: () => navigation.navigate('News'),
     },
     {
-      id: 'notifications',
-      title: 'Notifikace',
-      icon: 'notifications-outline',
-      onPress: () => navigation.navigate('NotificationsList'),
-    },
-    {
       id: 'settings',
       title: 'Nastavení',
       icon: 'settings',
       onPress: () => navigation.navigate('Settings'),
-    },
-    {
-      id: 'debug',
-      title: 'Debug',
-      icon: 'bug',
-      onPress: () => navigation.navigate('Debug'),
     },
     {
       id: 'privacy',
@@ -52,6 +42,31 @@ export default function InfoScreen() {
         Linking.openURL('https://www.fczlicin.cz/privacy-policy/');
       },
     },
+    {
+      id: 'about',
+      title: 'O aplikaci',
+      icon: 'information-circle-outline',
+      onPress: () => navigation.navigate('About'),
+      onLongPress: () => {
+        setShowAdvancedOptions(true);
+      },
+    },
+    ...(showAdvancedOptions
+      ? ([
+          {
+            id: 'notifications',
+            title: 'Notifikace',
+            icon: 'notifications-outline',
+            onPress: () => navigation.navigate('NotificationsList'),
+          },
+          {
+            id: 'debug',
+            title: 'Debug',
+            icon: 'bug',
+            onPress: () => navigation.navigate('Debug'),
+          },
+        ] satisfies InfoMenuItem[])
+      : []),
   ];
 
   return (
@@ -66,6 +81,8 @@ export default function InfoScreen() {
             key={item.id}
             style={styles.menuItem}
             onPress={item.onPress}
+            onLongPress={item.onLongPress}
+            delayLongPress={item.onLongPress ? 600 : undefined}
             activeOpacity={0.7}
           >
             <View style={styles.iconContainer}>

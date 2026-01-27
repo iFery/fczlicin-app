@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   primaryButton: {
-    backgroundColor: colors.brandBlue,
+    backgroundColor: colors.white,
     paddingVertical: 18,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   primaryButtonText: {
-    color: colors.white,
+    color: colors.brandBlue,
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: 0.3,

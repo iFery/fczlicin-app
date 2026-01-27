@@ -7,6 +7,7 @@ import { notificationApi, type Match } from '../api/footballEndpoints';
 import { ensureFirebaseInitialized, isFirebaseReady, safeMessagingCall } from './firebase';
 import { crashlyticsService } from './crashlytics';
 import { analyticsService } from './analytics';
+import { refreshMatchDataFromPayload } from './matchResultUpdater';
 
 /**
  * Get current environment from app config
@@ -206,6 +207,8 @@ class NotificationService {
             },
             trigger: null, // Okamžitě
           });
+
+          await refreshMatchDataFromPayload(remoteMessage?.data ?? null, 'foreground_message');
         });
       });
       
@@ -234,6 +237,7 @@ class NotificationService {
         const data = response.notification.request.content.data as Record<string, unknown> | undefined;
         
         if (data) {
+          void refreshMatchDataFromPayload(data, 'notification_tap');
           // Use navigation helper with queue system
           // No delay needed - queue handles timing
           handleNotificationNavigation(data);
@@ -266,6 +270,7 @@ class NotificationService {
         const data = lastNotificationResponse.notification.request.content.data as Record<string, unknown> | undefined;
         
         if (data) {
+          void refreshMatchDataFromPayload(data, 'notification_initial_tap');
           // Use navigation helper with queue system
           // Queue will handle navigation when navigation is ready
           handleNotificationNavigation(data);

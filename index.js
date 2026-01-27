@@ -2,6 +2,7 @@ import { registerRootComponent } from 'expo';
 import firebase from '@react-native-firebase/app';
 import messaging from '@react-native-firebase/messaging';
 import App from './App';
+import { refreshMatchDataFromPayload } from './src/services/matchResultUpdater';
 
 // CRITICAL: Initialize Firebase IMMEDIATELY after imports
 // This ensures Firebase is ready before any component tries to use it
@@ -115,8 +116,7 @@ const setupBackgroundMessaging = async () => {
       try {
         messaging().setBackgroundMessageHandler(async (remoteMessage) => {
           console.log('Background notification received:', remoteMessage);
-          // Zde můžete zpracovat notifikaci na pozadí
-          // Např. aktualizovat lokální databázi, zobrazit lokální notifikaci, atd.
+          await refreshMatchDataFromPayload(remoteMessage?.data ?? null, 'background_message');
         });
       } catch (msgError) {
         console.error('❌ [index.js] Error setting background message handler:', msgError);
